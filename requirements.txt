@@ -1,0 +1,14 @@
+
+# AI Genesis Engine Dependencies
+
+# Core Python game development
+pygame>=2.5.0
+
+# HTTP client for API calls
+aiohttp>=3.8.0
+
+# Optional: Supabase integration (if using Supabase secrets)
+supabase>=2.0.0
+
+# Development and testing
+pytest>=7.0.0
