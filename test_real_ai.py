@@ -8,14 +8,41 @@ import sys
 import asyncio
 from pathlib import Path
 
+def check_dependencies():
+    """Check if all required dependencies are installed."""
+    missing_deps = []
+    
+    try:
+        import aiohttp
+    except ImportError:
+        missing_deps.append("aiohttp")
+    
+    if missing_deps:
+        print("❌ Missing required dependencies:")
+        for dep in missing_deps:
+            print(f"   - {dep}")
+        print("\n🔧 To install dependencies, run:")
+        print("   pip install -r requirements.txt")
+        print("\n   Or install individually:")
+        for dep in missing_deps:
+            print(f"   pip install {dep}")
+        return False
+    
+    return True
+
 # Add the src directory to Python path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from genesis_engine.core.ai_client import AIClient
-from genesis_engine.core.logger import EngineLogger
-
 async def test_real_ai():
     """Test the real AI integration."""
+    # Check dependencies first
+    if not check_dependencies():
+        return False
+    
+    # Import after dependency check
+    from genesis_engine.core.ai_client import AIClient
+    from genesis_engine.core.logger import EngineLogger
+    
     logger = EngineLogger()
     ai_client = AIClient()
     
@@ -44,4 +71,5 @@ async def test_real_ai():
     return True
 
 if __name__ == "__main__":
-    asyncio.run(test_real_ai())
+    if check_dependencies():
+        asyncio.run(test_real_ai())
