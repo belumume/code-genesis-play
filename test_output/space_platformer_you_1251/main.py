@@ -1,4 +1,4 @@
-```python
+
 import pygame
 import sys
 import math
@@ -381,4 +381,248 @@ class Player(pygame.sprite.Sprite):
                 if self.gravity_direction in [GravityDirection.DOWN, GravityDirection.UP]:
                     if abs(self.velocity.x) > 0:
                         if self.rect.centerx < tile.centerx:
-                            self.rect.right = tile.
+                            self.rect.right = tile.left
+                        else:
+                            self.rect.left = tile.right
+                        self.pos.x = self.rect.x
+                        self.velocity.x = 0
+                else:
+                    if abs(self.velocity.y) > 0:
+                        if self.rect.centery < tile.centery:
+                            self.rect.bottom = tile.top
+                        else:
+                            self.rect.top = tile.bottom
+                        self.pos.y = self.rect.y
+                        self.velocity.y = 0
+                        
+    def take_damage(self, damage=1):
+        """Take damage if not invulnerable."""
+        if self.invulnerable_timer <= 0:
+            self.health -= damage
+            self.invulnerable_timer = 1.0  # 1 second invulnerability
+            
+    def draw(self, screen, camera_offset):
+        """Draw the player."""
+        draw_rect = self.rect.copy()
+        draw_rect.x -= camera_offset[0]
+        draw_rect.y -= camera_offset[1]
+        
+        # Flash when invulnerable
+        if self.invulnerable_timer > 0 and int(self.invulnerable_timer * 10) % 2:
+            return
+            
+        pygame.draw.rect(screen, BLUE, draw_rect)
+        pygame.draw.rect(screen, WHITE, draw_rect, 2)
+
+class Game:
+    """Main game class."""
+    def __init__(self):
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        pygame.display.set_caption("Crystal Cosmos: Galactic Harvest")
+        self.clock = pygame.time.Clock()
+        self.camera_offset = [0, 0]
+        
+        # Initialize game objects
+        self.player = Player(100, 400)
+        self.crystals = []
+        self.enemies = []
+        self.tiles = []
+        
+        # Game state
+        self.score = 0
+        self.level = 1
+        self.game_state = "playing"  # playing, game_over, won
+        self.font = pygame.font.Font(None, 36)
+        
+        self.setup_level()
+        
+    def setup_level(self):
+        """Set up the current level."""
+        self.tiles.clear()
+        self.crystals.clear()
+        self.enemies.clear()
+        
+        # Create platforms
+        platforms = [
+            pygame.Rect(0, SCREEN_HEIGHT - 50, SCREEN_WIDTH, 50),  # Ground
+            pygame.Rect(200, 600, 200, 20),
+            pygame.Rect(500, 500, 200, 20),
+            pygame.Rect(800, 400, 200, 20),
+            pygame.Rect(300, 300, 200, 20),
+            pygame.Rect(600, 200, 200, 20),
+        ]
+        self.tiles.extend(platforms)
+        
+        # Create crystals
+        crystal_positions = [
+            (250, 550, "blue"),
+            (550, 450, "blue"),
+            (850, 350, "green"),
+            (350, 250, "green"),
+            (650, 150, "red"),
+        ]
+        
+        for x, y, crystal_type in crystal_positions:
+            self.crystals.append(Crystal(x, y, crystal_type))
+            
+        # Create enemies
+        self.enemies.append(BlobAlien(220, 580))
+        self.enemies.append(BlobAlien(520, 480))
+        self.enemies.append(FlyingSentinel(400, 300))
+        
+    def update_camera(self):
+        """Update camera to follow player."""
+        target_x = self.player.rect.centerx - SCREEN_WIDTH // 2
+        target_y = self.player.rect.centery - SCREEN_HEIGHT // 2
+        
+        # Smooth camera movement
+        self.camera_offset[0] += (target_x - self.camera_offset[0]) * 0.05
+        self.camera_offset[1] += (target_y - self.camera_offset[1]) * 0.05
+        
+    def handle_events(self):
+        """Handle pygame events."""
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r and self.game_state == "game_over":
+                    self.restart_game()
+                elif event.key == pygame.K_ESCAPE:
+                    return False
+        return True
+        
+    def restart_game(self):
+        """Restart the game."""
+        self.player = Player(100, 400)
+        self.score = 0
+        self.level = 1
+        self.game_state = "playing"
+        self.setup_level()
+        
+    def update(self, dt):
+        """Update game state."""
+        if self.game_state != "playing":
+            return
+            
+        keys = pygame.key.get_pressed()
+        
+        # Update player
+        self.player.update(dt, keys, self.tiles)
+        
+        # Update enemies
+        for enemy in self.enemies:
+            enemy.update(dt, self.player, self.tiles)
+            
+        # Update crystals
+        for crystal in self.crystals:
+            crystal.update(dt)
+            
+        # Check crystal collection
+        for crystal in self.crystals[:]:
+            if not crystal.collected and self.player.rect.colliderect(crystal.rect):
+                crystal.collected = True
+                self.score += crystal.value
+                self.crystals.remove(crystal)
+                
+        # Check enemy collisions
+        for enemy in self.enemies:
+            if self.player.rect.colliderect(enemy.rect):
+                self.player.take_damage()
+                
+        # Check win/lose conditions
+        if self.player.health <= 0 or self.player.oxygen <= 0:
+            self.game_state = "game_over"
+        elif len(self.crystals) == 0:
+            self.game_state = "won"
+            
+        # Update camera
+        self.update_camera()
+        
+    def draw(self):
+        """Draw everything."""
+        self.screen.fill(BLACK)
+        
+        # Draw tiles
+        for tile in self.tiles:
+            draw_rect = tile.copy()
+            draw_rect.x -= self.camera_offset[0]
+            draw_rect.y -= self.camera_offset[1]
+            pygame.draw.rect(self.screen, GRAY, draw_rect)
+            
+        # Draw crystals
+        for crystal in self.crystals:
+            crystal.draw(self.screen, self.camera_offset)
+            
+        # Draw enemies
+        for enemy in self.enemies:
+            enemy.draw(self.screen, self.camera_offset)
+            
+        # Draw player
+        self.player.draw(self.screen, self.camera_offset)
+        
+        # Draw UI
+        self.draw_ui()
+        
+        pygame.display.flip()
+        
+    def draw_ui(self):
+        """Draw user interface."""
+        # Health bar
+        health_width = 200
+        health_height = 20
+        health_ratio = self.player.health / self.player.max_health
+        pygame.draw.rect(self.screen, RED, (10, 10, health_width, health_height))
+        pygame.draw.rect(self.screen, GREEN, (10, 10, health_width * health_ratio, health_height))
+        
+        # Oxygen bar
+        oxygen_ratio = self.player.oxygen / self.player.max_oxygen
+        pygame.draw.rect(self.screen, BLUE, (10, 40, health_width, health_height))
+        pygame.draw.rect(self.screen, CYAN, (10, 40, health_width * oxygen_ratio, health_height))
+        
+        # Jetpack fuel bar
+        fuel_ratio = self.player.jetpack_fuel / self.player.max_jetpack_fuel
+        pygame.draw.rect(self.screen, GRAY, (10, 70, health_width, health_height))
+        pygame.draw.rect(self.screen, YELLOW, (10, 70, health_width * fuel_ratio, health_height))
+        
+        # Score
+        score_text = self.font.render(f"Score: {self.score}", True, WHITE)
+        self.screen.blit(score_text, (10, 100))
+        
+        # Crystals remaining
+        crystals_text = self.font.render(f"Crystals: {len(self.crystals)}", True, WHITE)
+        self.screen.blit(crystals_text, (10, 140))
+        
+        # Game over screen
+        if self.game_state == "game_over":
+            game_over_text = self.font.render("GAME OVER - Press R to restart", True, RED)
+            text_rect = game_over_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+            self.screen.blit(game_over_text, text_rect)
+        elif self.game_state == "won":
+            win_text = self.font.render("YOU WON! - Press R to restart", True, GREEN)
+            text_rect = win_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+            self.screen.blit(win_text, text_rect)
+            
+        # Controls help
+        help_text = [
+            "Controls: A/D - Move, Space - Jump, W - Switch Gravity, Shift - Jetpack"
+        ]
+        for i, text in enumerate(help_text):
+            help_surface = pygame.font.Font(None, 24).render(text, True, WHITE)
+            self.screen.blit(help_surface, (10, SCREEN_HEIGHT - 30 + i * 20))
+        
+    def run(self):
+        """Main game loop."""
+        running = True
+        while running:
+            dt = self.clock.tick(FPS) / 1000.0
+            
+            running = self.handle_events()
+            self.update(dt)
+            self.draw()
+            
+        pygame.quit()
+        sys.exit()
+
+if __name__ == "__main__":
+    game = Game()
+    game.run()

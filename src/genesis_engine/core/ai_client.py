@@ -1,4 +1,3 @@
-
 """
 AI Client for the Genesis Engine.
 Handles all interactions with Claude 4 Opus API with fallback to mock data.
@@ -57,29 +56,139 @@ class AIClient:
         """
         Clean the AI response to ensure it's valid Python code.
         Removes markdown code blocks and other formatting issues.
+        Enhanced with multiple validation layers to prevent syntax errors.
         """
-        # Remove markdown code blocks
-        response = re.sub(r'```python\s*\n', '', response)
-        response = re.sub(r'```\s*$', '', response)
-        response = re.sub(r'^```\s*\n', '', response, flags=re.MULTILINE)
+        print(f"🧹 Cleaning AI response (length: {len(response)})")
         
-        # Remove any leading/trailing whitespace
+        # Step 1: Remove all markdown code blocks (multiple patterns)
+        patterns_to_remove = [
+            r'```python\s*\n?',
+            r'```\s*python\s*\n?',
+            r'```\s*\n?',
+            r'^```.*\n',  # Remove any line starting with ```
+            r'\n```.*$',  # Remove any line ending with ```
+        ]
+        
+        for pattern in patterns_to_remove:
+            response = re.sub(pattern, '', response, flags=re.MULTILINE)
+        
+        # Step 2: Remove any explanatory text before Python code
+        lines = response.split('\n')
+        python_start_idx = 0
+        
+        # Find the first line that looks like Python code
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if (stripped.startswith('import ') or 
+                stripped.startswith('from ') or
+                stripped.startswith('# ') or
+                stripped.startswith('"""') or
+                stripped.startswith('class ') or
+                stripped.startswith('def ') or
+                stripped.startswith('if __name__')):
+                python_start_idx = i
+                break
+        
+        # Keep only Python code
+        response = '\n'.join(lines[python_start_idx:])
+        
+        # Step 3: Remove trailing markdown or explanations
+        lines = response.split('\n')
+        python_end_idx = len(lines)
+        
+        # Find where Python code ends (look for markdown or explanations)
+        for i in range(len(lines) - 1, -1, -1):
+            line = lines[i].strip()
+            if line and not line.startswith('#') and not line.startswith('```'):
+                python_end_idx = i + 1
+                break
+                
+        response = '\n'.join(lines[:python_end_idx])
+        
+        # Step 4: Final cleanup
         response = response.strip()
         
-        # Ensure the response starts with valid Python (not markdown)
-        if response.startswith('```'):
-            # Find the first actual Python line
-            lines = response.split('\n')
-            start_idx = 0
-            for i, line in enumerate(lines):
-                if not line.strip().startswith('```') and line.strip():
-                    start_idx = i
-                    break
-            response = '\n'.join(lines[start_idx:])
+        # Step 5: Validation - ensure it starts with valid Python
+        if not response:
+            print("⚠️  Empty response after cleaning!")
+            return self._get_fallback_python_code()
+            
+        first_line = response.split('\n')[0].strip()
+        valid_starts = ['import', 'from', '#', '"""', 'class', 'def', 'if', 'try', 'with']
         
+        if not any(first_line.startswith(start) for start in valid_starts):
+            print(f"⚠️  Response doesn't start with valid Python: '{first_line}'")
+            # Try to find and extract just the Python part
+            for line in response.split('\n'):
+                if any(line.strip().startswith(start) for start in valid_starts):
+                    idx = response.find(line)
+                    response = response[idx:]
+                    break
+            else:
+                return self._get_fallback_python_code()
+        
+        print(f"✅ Code cleaned successfully (final length: {len(response)})")
         return response
     
-    async def _make_api_call(self, messages: list) -> str:
+    def _get_fallback_python_code(self) -> str:
+        """Return a minimal working Python game as fallback."""
+        return '''import pygame
+import sys
+
+# Initialize Pygame
+pygame.init()
+screen = pygame.display.set_mode((800, 600))
+pygame.display.set_caption("Generated Game")
+clock = pygame.time.Clock()
+
+# Colors
+WHITE = (255, 255, 255)
+BLUE = (100, 150, 255)
+RED = (255, 100, 100)
+
+# Player
+player_rect = pygame.Rect(100, 300, 40, 40)
+player_speed = 200
+
+# Game loop
+running = True
+while running:
+    dt = clock.tick(60) / 1000.0
+    
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+    
+    # Handle input
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_LEFT]:
+        player_rect.x -= player_speed * dt
+    if keys[pygame.K_RIGHT]:
+        player_rect.x += player_speed * dt
+    if keys[pygame.K_UP]:
+        player_rect.y -= player_speed * dt
+    if keys[pygame.K_DOWN]:
+        player_rect.y += player_speed * dt
+    
+    # Keep player on screen
+    player_rect.clamp_ip(pygame.Rect(0, 0, 800, 600))
+    
+    # Draw everything
+    screen.fill(WHITE)
+    pygame.draw.rect(screen, BLUE, player_rect)
+    
+    # Instructions
+    font = pygame.font.Font(None, 36)
+    text = font.render("Use arrow keys to move", True, RED)
+    screen.blit(text, (10, 10))
+    
+    pygame.display.flip()
+
+pygame.quit()
+sys.exit()
+'''
+
+    def _make_api_call(self, messages: list) -> str:
         """Make an async API call to Claude."""
         if self.use_mock:
             return self._get_mock_response(messages[0]['content'])
@@ -183,7 +292,7 @@ Format as Markdown. Be specific about colors, sizes, and styles."""
         return self._run_async(self._make_api_call(messages))
     
     def generate_game_code(self, gdd_content: str, tech_plan: str) -> str:
-        """Generate complete game code with validation."""
+        """Generate complete game code with enhanced validation."""
         messages = [{
             'role': 'user',
             'content': f"""Generate complete Python game code using Pygame based on these documents:
@@ -195,19 +304,32 @@ TECHNICAL PLAN:
 {tech_plan}
 
 CRITICAL REQUIREMENTS:
-- Generate ONLY valid Python code - no markdown code blocks or formatting
+- Generate ONLY valid Python code - no markdown, no explanations, no code blocks
+- Start immediately with 'import pygame' - no prefixes
 - Use simple colored rectangles/circles for graphics (no external images)
 - Include player movement, collision detection, win/loss conditions
-- 60 FPS game loop
+- 60 FPS game loop with proper error handling
 - Well-commented code following PEP 8
-- Fully playable game
-- Start your response immediately with 'import pygame' - no explanations or markdown
+- Complete, fully playable game
+- End with if __name__ == "__main__": main()
 
-Generate ONLY the Python code, no explanations, no markdown blocks."""
+IMPORTANT: Your response must be pure Python code that can be executed directly. Do not include any markdown formatting, explanations, or code block markers. Start your response with the first import statement."""
         }]
         
         response = self._run_async(self._make_api_call(messages))
-        return self._clean_code_response(response)
+        cleaned_response = self._clean_code_response(response)
+        
+        # Additional validation: try to compile the code
+        try:
+            compile(cleaned_response, '<generated_code>', 'exec')
+            print("✅ Generated code passes syntax validation")
+        except SyntaxError as e:
+            print(f"⚠️  Syntax error in generated code: {e}")
+            print(f"Error at line {e.lineno}: {e.text}")
+            # Return fallback code instead of broken code
+            cleaned_response = self._get_fallback_python_code()
+        
+        return cleaned_response
     
     def _get_mock_response(self, prompt: str) -> str:
         """Fallback mock responses for testing."""
