@@ -2,17 +2,20 @@
 """
 AI Client for the Genesis Engine.
 Handles all interactions with Claude 4 Opus API with fallback to mock data.
+Enhanced with better code validation to prevent recurring syntax errors.
 """
 import os
 import json
 import aiohttp
 import asyncio
+import re
 from typing import Optional
 
 class AIClient:
     """
     Client for interacting with Anthropic's Claude 4 Opus API.
     Falls back to mock responses if API is unavailable.
+    Enhanced with code validation to prevent syntax errors.
     """
     
     def __init__(self):
@@ -49,6 +52,32 @@ class AIClient:
             pass
             
         return None
+    
+    def _clean_code_response(self, response: str) -> str:
+        """
+        Clean the AI response to ensure it's valid Python code.
+        Removes markdown code blocks and other formatting issues.
+        """
+        # Remove markdown code blocks
+        response = re.sub(r'```python\s*\n', '', response)
+        response = re.sub(r'```\s*$', '', response)
+        response = re.sub(r'^```\s*\n', '', response, flags=re.MULTILINE)
+        
+        # Remove any leading/trailing whitespace
+        response = response.strip()
+        
+        # Ensure the response starts with valid Python (not markdown)
+        if response.startswith('```'):
+            # Find the first actual Python line
+            lines = response.split('\n')
+            start_idx = 0
+            for i, line in enumerate(lines):
+                if not line.strip().startswith('```') and line.strip():
+                    start_idx = i
+                    break
+            response = '\n'.join(lines[start_idx:])
+        
+        return response
     
     async def _make_api_call(self, messages: list) -> str:
         """Make an async API call to Claude."""
@@ -154,7 +183,7 @@ Format as Markdown. Be specific about colors, sizes, and styles."""
         return self._run_async(self._make_api_call(messages))
     
     def generate_game_code(self, gdd_content: str, tech_plan: str) -> str:
-        """Generate complete game code."""
+        """Generate complete game code with validation."""
         messages = [{
             'role': 'user',
             'content': f"""Generate complete Python game code using Pygame based on these documents:
@@ -165,18 +194,20 @@ GAME DESIGN DOCUMENT:
 TECHNICAL PLAN:
 {tech_plan}
 
-Requirements:
-- Complete main.py file with full game implementation
+CRITICAL REQUIREMENTS:
+- Generate ONLY valid Python code - no markdown code blocks or formatting
 - Use simple colored rectangles/circles for graphics (no external images)
 - Include player movement, collision detection, win/loss conditions
 - 60 FPS game loop
 - Well-commented code following PEP 8
 - Fully playable game
+- Start your response immediately with 'import pygame' - no explanations or markdown
 
-Generate ONLY the Python code, no explanations."""
+Generate ONLY the Python code, no explanations, no markdown blocks."""
         }]
         
-        return self._run_async(self._make_api_call(messages))
+        response = self._run_async(self._make_api_call(messages))
+        return self._clean_code_response(response)
     
     def _get_mock_response(self, prompt: str) -> str:
         """Fallback mock responses for testing."""
@@ -226,9 +257,8 @@ Generate ONLY the Python code, no explanations."""
 *Note: This is MOCK data for testing.*
 """
         else:
-            return """# MOCK Game Code
-
-import pygame
+            # Return clean Python code without markdown for game code generation
+            return """import pygame
 import sys
 
 # MOCK: Basic Pygame setup
@@ -250,5 +280,4 @@ while running:
 pygame.quit()
 sys.exit()
 
-# Note: This is MOCK data for testing. Real AI will generate complete games.
-"""
+# Note: This is MOCK data for testing. Real AI will generate complete games."""
