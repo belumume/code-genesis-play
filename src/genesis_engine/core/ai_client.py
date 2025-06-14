@@ -1,11 +1,9 @@
-
 """
 AI Client for Genesis Engine
 Handles communication with Claude 4 Opus for game generation.
 """
-import os
-from typing import Optional, Dict, Any
 import json
+from typing import Optional, Dict, Any
 
 class AIClient:
     """
@@ -14,10 +12,41 @@ class AIClient:
     """
     
     def __init__(self):
-        self.api_key = os.getenv('ANTHROPIC_API_KEY')
-        self.model = "claude-4-opus-20240229"
+        # API key will be fetched from Supabase secrets when needed
+        self.model = "claude-4-opus-20250514"  # Using latest Claude 4 Opus
         self.base_url = "https://api.anthropic.com/v1/messages"
         
+    async def _get_api_key(self) -> Optional[str]:
+        """Fetch API key from Supabase secrets."""
+        try:
+            from supabase import create_client
+            import os
+            
+            # Get Supabase credentials from environment
+            supabase_url = os.getenv('VITE_SUPABASE_URL')
+            supabase_key = os.getenv('VITE_SUPABASE_ANON_KEY')
+            
+            if not supabase_url or not supabase_key:
+                print("❌ Supabase credentials not found in environment")
+                return None
+                
+            supabase = create_client(supabase_url, supabase_key)
+            
+            # Fetch the secret
+            response = supabase.functions.invoke('get-secret', {
+                'name': 'ANTHROPIC_API_KEY'
+            })
+            
+            if response.get('data'):
+                return response['data'].get('value')
+            else:
+                print("❌ Failed to fetch ANTHROPIC_API_KEY from secrets")
+                return None
+                
+        except Exception as e:
+            print(f"❌ Error fetching API key: {str(e)}")
+            return None
+    
     def generate_game_design_document(self, prompt: str) -> str:
         """Generate a comprehensive Game Design Document from prompt."""
         system_prompt = """You are an expert game designer creating a Game Design Document. 
@@ -39,7 +68,7 @@ class AIClient:
         Keep it simple but complete. This will be used to generate actual Python code.
         """
         
-        # Simulate AI response for now - in real implementation, this would call Claude API
+        # For now, return mock response - will implement actual API call once we test the pipeline
         return self._mock_gdd_response(prompt)
     
     def generate_technical_plan(self, gdd_content: str) -> str:
@@ -614,5 +643,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-

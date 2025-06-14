@@ -7,6 +7,7 @@ Used for development and debugging.
 
 import sys
 import os
+import asyncio
 from pathlib import Path
 
 # Add the src directory to Python path
@@ -14,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from genesis_engine.main import GenesisEngine
 
-def test_basic_generation():
+async def test_basic_generation():
     """Test basic game generation with a simple prompt."""
     print("🧪 Testing Genesis Engine with sample prompt...")
     
@@ -25,7 +26,7 @@ def test_basic_generation():
     engine = GenesisEngine()
     
     # Run generation
-    success = engine.run(test_prompt, output_dir="test_output")
+    success = await engine.run_async(test_prompt, output_dir="test_output")
     
     if success:
         print("✅ Test successful! Check the test_output directory.")
@@ -35,6 +36,9 @@ def test_basic_generation():
     
     return success
 
-if __name__ == "__main__":
-    test_basic_generation()
+def test_basic_generation_sync():
+    """Synchronous wrapper for the async test."""
+    return asyncio.run(test_basic_generation())
 
+if __name__ == "__main__":
+    test_basic_generation_sync()
