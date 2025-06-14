@@ -1,3 +1,4 @@
+
 """
 AI Client for Genesis Engine
 Handles communication with Claude 4 Opus for game generation.
@@ -287,11 +288,11 @@ main.py              # Complete game implementation
     
     def _mock_game_code_response(self) -> str:
         """Mock game code response."""
-        return '''#!/usr/bin/env python3
-"""
+        return """#!/usr/bin/env python3
+\"\"\"
 Auto-generated Space Platformer Game
 Created by Genesis Engine v1.0
-"""
+\"\"\"
 
 import pygame
 import sys
@@ -335,7 +336,7 @@ class Vector2:
         return Vector2(self.x * scalar, self.y * scalar)
 
 class Player:
-    """Player character with physics and controls."""
+    \"\"\"Player character with physics and controls.\"\"\"
     
     def __init__(self, x: float, y: float):
         self.position = Vector2(x, y)
@@ -347,7 +348,7 @@ class Player:
         self.color = BLUE
         
     def update(self, dt: float, platforms: List['Platform']):
-        """Update player physics and handle input."""
+        \"\"\"Update player physics and handle input.\"\"\"
         keys = pygame.key.get_pressed()
         
         # Horizontal movement
@@ -376,7 +377,7 @@ class Player:
         self.position.x = max(0, min(SCREEN_WIDTH - self.size.x, self.position.x))
     
     def _handle_collisions(self, platforms: List['Platform'], old_pos: Vector2):
-        """Handle collision with platforms."""
+        \"\"\"Handle collision with platforms.\"\"\"
         player_rect = pygame.Rect(self.position.x, self.position.y, self.size.x, self.size.y)
         
         for platform in platforms:
@@ -392,26 +393,26 @@ class Player:
                     self.velocity.x = 0
     
     def get_rect(self) -> pygame.Rect:
-        """Get player rectangle for collision detection."""
+        \"\"\"Get player rectangle for collision detection.\"\"\"
         return pygame.Rect(self.position.x, self.position.y, self.size.x, self.size.y)
     
     def render(self, screen: pygame.Surface):
-        """Render the player."""
+        \"\"\"Render the player.\"\"\"
         pygame.draw.rect(screen, self.color, self.get_rect())
 
 class Platform:
-    """Static platform for level geometry."""
+    \"\"\"Static platform for level geometry.\"\"\"
     
     def __init__(self, x: float, y: float, width: float, height: float):
         self.rect = pygame.Rect(x, y, width, height)
         self.color = GREEN
     
     def render(self, screen: pygame.Surface):
-        """Render the platform."""
+        \"\"\"Render the platform.\"\"\"
         pygame.draw.rect(screen, self.color, self.rect)
 
 class Collectible:
-    """Collectible items for scoring."""
+    \"\"\"Collectible items for scoring.\"\"\"
     
     def __init__(self, x: float, y: float):
         self.position = Vector2(x, y)
@@ -420,7 +421,7 @@ class Collectible:
         self.color = YELLOW
     
     def get_rect(self) -> pygame.Rect:
-        """Get bounding rectangle for collision."""
+        \"\"\"Get bounding rectangle for collision.\"\"\"
         return pygame.Rect(
             self.position.x - self.radius,
             self.position.y - self.radius,
@@ -429,7 +430,7 @@ class Collectible:
         )
     
     def render(self, screen: pygame.Surface):
-        """Render the collectible."""
+        \"\"\"Render the collectible.\"\"\"
         if not self.collected:
             pygame.draw.circle(
                 screen,
@@ -439,7 +440,7 @@ class Collectible:
             )
 
 class Enemy:
-    """Basic enemy with simple movement."""
+    \"\"\"Basic enemy with simple movement.\"\"\"
     
     def __init__(self, x: float, y: float):
         self.position = Vector2(x, y)
@@ -450,7 +451,7 @@ class Enemy:
         self.start_x = x
     
     def update(self, dt: float):
-        """Update enemy movement."""
+        \"\"\"Update enemy movement.\"\"\"
         self.position.x += self.velocity.x * dt
         
         # Simple patrol behavior
@@ -459,15 +460,15 @@ class Enemy:
             self.velocity.x *= -1
     
     def get_rect(self) -> pygame.Rect:
-        """Get enemy rectangle for collision."""
+        \"\"\"Get enemy rectangle for collision.\"\"\"
         return pygame.Rect(self.position.x, self.position.y, self.size.x, self.size.y)
     
     def render(self, screen: pygame.Surface):
-        """Render the enemy."""
+        \"\"\"Render the enemy.\"\"\"
         pygame.draw.rect(screen, self.color, self.get_rect())
 
 class Game:
-    """Main game class."""
+    \"\"\"Main game class.\"\"\"
     
     def __init__(self):
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -485,7 +486,7 @@ class Game:
         self.font = pygame.font.Font(None, 36)
         
     def _create_platforms(self) -> List[Platform]:
-        """Create level platforms."""
+        \"\"\"Create level platforms.\"\"\"
         return [
             # Ground platforms
             Platform(0, SCREEN_HEIGHT - 40, SCREEN_WIDTH, 40),
@@ -498,7 +499,7 @@ class Game:
         ]
     
     def _create_collectibles(self) -> List[Collectible]:
-        """Create collectible items."""
+        \"\"\"Create collectible items.\"\"\"
         return [
             Collectible(275, 420),
             Collectible(475, 320),
@@ -508,14 +509,14 @@ class Game:
         ]
     
     def _create_enemies(self) -> List[Enemy]:
-        """Create enemy objects."""
+        \"\"\"Create enemy objects.\"\"\"
         return [
             Enemy(250, 426),
             Enemy(450, 326),
         ]
     
     def handle_events(self):
-        """Handle pygame events."""
+        \"\"\"Handle pygame events.\"\"\"
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
@@ -526,7 +527,7 @@ class Game:
                     self._restart_game()
     
     def update(self, dt: float):
-        """Update game state."""
+        \"\"\"Update game state.\"\"\"
         if self.state == GameState.PLAYING:
             # Update player
             self.player.update(dt, self.platforms)
@@ -556,7 +557,7 @@ class Game:
                 self.state = GameState.GAME_OVER
     
     def render(self):
-        """Render all game objects."""
+        \"\"\"Render all game objects.\"\"\"
         # Clear screen
         self.screen.fill(LIGHT_BLUE)
         
@@ -582,7 +583,7 @@ class Game:
         pygame.display.flip()
     
     def _render_ui(self):
-        """Render user interface."""
+        \"\"\"Render user interface.\"\"\"
         # Score
         score_text = self.font.render(f"Score: {self.score}", True, WHITE)
         self.screen.blit(score_text, (10, 10))
@@ -594,7 +595,7 @@ class Game:
             self._render_message("GAME OVER! Press R to restart", RED)
     
     def _render_message(self, text: str, color: Tuple[int, int, int]):
-        """Render centered message with background."""
+        \"\"\"Render centered message with background.\"\"\"
         message = self.font.render(text, True, WHITE)
         rect = message.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
         
@@ -612,7 +613,7 @@ class Game:
         self.screen.blit(message, rect)
     
     def _restart_game(self):
-        """Restart game to initial state."""
+        \"\"\"Restart game to initial state.\"\"\"
         self.player = Player(100, 300)
         self.collectibles = self._create_collectibles()
         self.enemies = self._create_enemies()
@@ -620,7 +621,7 @@ class Game:
         self.state = GameState.PLAYING
     
     def run(self):
-        """Main game loop."""
+        \"\"\"Main game loop.\"\"\"
         while self.running:
             dt = self.clock.tick(FPS) / 1000.0
             
@@ -632,7 +633,7 @@ class Game:
         sys.exit()
 
 def main():
-    """Entry point for the game."""
+    \"\"\"Entry point for the game.\"\"\"
     try:
         game = Game()
         game.run()
@@ -643,3 +644,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+"""
