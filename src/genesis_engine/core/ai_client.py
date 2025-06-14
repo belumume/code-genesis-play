@@ -19,7 +19,7 @@ class AIClient:
         # Try multiple sources for the API key
         self.api_key = self._get_api_key()
         self.base_url = "https://api.anthropic.com/v1/messages"
-        self.model = "claude-3-opus-20240229"  # Using Claude 3 Opus for now
+        self.model = "claude-opus-4-20250514"  # Using Claude 3 Opus for now
         self.use_mock = not bool(self.api_key)
         
         if self.use_mock:
