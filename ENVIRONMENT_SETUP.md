@@ -1,199 +1,288 @@
 # Environment Setup Guide
 
-This guide explains how to set up environment variables for the AI Genesis Engine project.
+Complete setup instructions for AI Genesis Engine development and deployment.
 
-## Quick Start
+## 🔧 Prerequisites
 
-1. **Copy the environment template:**
-   ```bash
-   cp env.template .env
-   ```
+- Python 3.10 or higher
+- Node.js 18 or higher
+- Git
+- Anthropic API key (for Claude 4 Opus)
 
-2. **Fill in the required values** in your `.env` file (see sections below)
+## 🚀 Quick Start
 
-3. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
-
-## Required Environment Variables
-
-These variables are **required** for the application to function properly:
-
-### Supabase Configuration
-
+### 1. Clone the Repository
 ```bash
-VITE_SUPABASE_URL=https://your-project-id.supabase.co
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+git clone https://github.com/yourusername/ai-genesis-engine.git
+cd ai-genesis-engine
 ```
 
-**How to get these values:**
-1. Go to your [Supabase dashboard](https://supabase.com/dashboard)
-2. Select your project
-3. Go to Settings > API
-4. Copy the "Project URL" and "Project API keys" (anon/public key)
-
-### AI Services
-
+### 2. Set Up Python Environment
 ```bash
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
+
+# Install Python dependencies
+pip install -r requirements.txt
 ```
 
-**How to get this:**
-1. Sign up at [Anthropic Console](https://console.anthropic.com/)
-2. Generate an API key in your account settings
-3. This is used for AI-powered game generation
-
-## Optional Environment Variables
-
-### Development Settings
-
+### 3. Set Up Frontend
 ```bash
-VITE_DEV_SERVER_PORT=8080
-VITE_DEV_SERVER_HOST=localhost
-VITE_API_BASE_URL=http://localhost:8080/api
+# Install Node dependencies
+npm install
 ```
 
-### Feature Flags
-
-Enable or disable specific features:
-
-```bash
-VITE_ENABLE_AI_GENERATION=true
-VITE_ENABLE_GAME_PREVIEW=true
-VITE_ENABLE_REAL_TIME_UPDATES=true
-VITE_ENABLE_ANALYTICS=false
-VITE_ENABLE_DEBUG_MODE=false
-```
-
-### Security (Production)
+### 4. Configure Environment Variables
+Create a `.env` file in the project root:
 
 ```bash
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
-JWT_SECRET=your_jwt_secret_minimum_32_characters
-ENCRYPTION_KEY=your_encryption_key_minimum_32_characters
+# REQUIRED: Get from https://console.anthropic.com/
+ANTHROPIC_API_KEY=sk-ant-api03-YOUR_KEY_HERE
+
+# Optional: Override defaults
+SERVER_PORT=8000
+LOG_LEVEL=INFO
 ```
 
-### Monitoring (Optional)
+### 5. Start the Application
 
+**Terminal 1 - Backend Server:**
 ```bash
-SENTRY_DSN=your_sentry_dsn_here
-VITE_SENTRY_DSN=your_sentry_dsn_here
+python run_server.py
 ```
 
-## Environment Files
+**Terminal 2 - Frontend:**
+```bash
+npm run dev
+```
 
-The project uses different environment files for different purposes:
+Access the application at http://localhost:5173
 
-- **`.env`** - Your local development environment (never commit this!)
-- **`env.template`** - Template with all available variables and documentation
-- **`.env.local`** - Local overrides (also never commit)
-- **`.env.production`** - Production-specific variables (if needed)
+## 📋 Environment Variables Reference
 
-## Environment Variable Prefixes
+### Required Variables
 
-Due to Vite's security model:
+| Variable | Description | How to Get |
+|----------|-------------|------------|
+| `ANTHROPIC_API_KEY` | Claude 4 Opus API key | [Anthropic Console](https://console.anthropic.com/) |
 
-- **`VITE_`** prefixed variables are exposed to the browser/client-side code
-- **Non-prefixed** variables are only available on the server-side (Node.js/Python)
+### Optional Configuration
 
-## Validation and Error Handling
+#### Server Settings
+```bash
+# Server Configuration
+SERVER_HOST=0.0.0.0              # Host to bind to
+SERVER_PORT=8000                 # Port for FastAPI server
+CORS_ORIGINS=["http://localhost:5173", "http://localhost:3000"]
 
-The application automatically validates required environment variables on startup:
+# API Configuration
+ANTHROPIC_MODEL=claude-opus-4-20250514  # Claude model to use
+API_TIMEOUT=60                   # API timeout in seconds
+MAX_RETRIES=3                    # Number of retry attempts
+```
 
-- **Missing required variables** will show helpful error messages
-- **Invalid values** (e.g., invalid URLs, malformed keys) will be caught early
-- **Development mode** provides additional debugging information
+#### Generation Settings
+```bash
+# Output Directories
+OUTPUT_DIR=generated_games       # Where games are saved
+TEST_OUTPUT_DIR=test_output      # Test game output
 
-## Production Deployment
+# Game Generation
+GAME_MAX_TOKENS=4096            # Max tokens for code generation
+GAME_TEMPERATURE=0.7            # AI creativity (0-1)
+MAX_PROMPT_LENGTH=500           # Max prompt characters
+MIN_PROMPT_LENGTH=10            # Min prompt characters
+```
 
-For production deployments:
+#### Feature Flags
+```bash
+# Feature Control
+ENABLE_MOCK_MODE=false          # Use mock responses (no API)
+ENABLE_WEBSOCKETS=true          # Real-time updates
+ENABLE_GAME_DOWNLOAD=true       # Allow ZIP downloads
+ENABLE_RATE_LIMITING=true       # API rate limiting
+```
 
-1. **Never commit `.env` files** with real credentials
-2. **Use your platform's environment variable system:**
-   - Vercel: Environment Variables in dashboard
-   - Netlify: Site settings > Environment variables
-   - Railway: Variables tab in your project
-   - Docker: Use `--env-file` or docker-compose environment sections
+#### Security & Logging
+```bash
+# Security
+RATE_LIMIT_REQUESTS=10          # Requests per window
+RATE_LIMIT_WINDOW=3600          # Rate limit window (seconds)
 
-3. **Set `NODE_ENV=production`** in your production environment
+# Logging
+LOG_LEVEL=INFO                  # DEBUG, INFO, WARNING, ERROR
+LOG_FORMAT=json                 # json or text
+```
 
-## Troubleshooting
+#### Frontend Configuration
+```bash
+# For Vite frontend
+VITE_API_URL=http://localhost:8000  # Backend API URL
+```
+
+## 🔐 Getting API Keys
+
+### Anthropic API Key (Required)
+
+1. **Sign up** at [Anthropic Console](https://console.anthropic.com/)
+2. **Navigate** to API Keys section
+3. **Create** a new API key
+4. **Copy** the key (starts with `sk-ant-api03-`)
+5. **Add** to your `.env` file
+
+⚠️ **Important**: 
+- Keep your API key secret
+- Don't commit `.env` to version control
+- Use different keys for dev/production
+
+### Supabase (Optional)
+
+If using Supabase for secrets management:
+
+1. Install Supabase CLI
+2. Run `supabase functions deploy get-secret`
+3. Store your Anthropic key as a secret
+
+## 🧪 Testing Your Setup
+
+### 1. Test Backend Connection
+```bash
+curl http://localhost:8000/api/health
+```
+
+Expected response:
+```json
+{
+  "status": "healthy",
+  "ai_available": true,
+  "model": "claude-opus-4-20250514",
+  "version": "1.0.0"
+}
+```
+
+### 2. Test AI Integration
+```bash
+python test_real_ai.py
+```
+
+### 3. Generate a Test Game
+```bash
+python -m src.genesis_engine "A simple test game"
+```
+
+## 🚀 Production Deployment
+
+### Using Docker
+```dockerfile
+FROM python:3.10-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+ENV ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+CMD ["python", "run_server.py"]
+```
+
+### Platform-Specific Setup
+
+#### Vercel/Netlify (Frontend)
+```bash
+# Build command
+npm run build
+
+# Environment variables in dashboard
+VITE_API_URL=https://your-backend-url.com
+```
+
+#### Railway/Render (Backend)
+```bash
+# Start command
+python run_server.py
+
+# Add environment variables in dashboard
+ANTHROPIC_API_KEY=your_key_here
+```
+
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-**"Missing VITE_SUPABASE_URL environment variable"**
-- Make sure you've created a `.env` file from the template
-- Check that the variable name is spelled correctly
-- Ensure there are no spaces around the `=` sign
+**"No Anthropic API key found"**
+- Check `.env` file exists in project root
+- Verify `ANTHROPIC_API_KEY` is set correctly
+- Ensure no spaces around `=` sign
 
-**"Supabase client initialization failed"**
-- Verify your Supabase URL and API key are correct
-- Check that your Supabase project is active
-- Make sure the API key has the correct permissions
+**"API call failed: 401"**
+- Invalid API key
+- Check key starts with `sk-ant-api03-`
+- Verify key is active in Anthropic Console
 
-**"ANTHROPIC_API_KEY not found"**
-- This variable is required for AI features
-- Get your API key from the Anthropic Console
-- Make sure it's not prefixed with `VITE_` (it's server-side only)
+**"CORS error" in browser**
+- Backend server not running
+- Check `CORS_ORIGINS` includes your frontend URL
+- Verify backend is accessible at configured URL
+
+**"Connection refused" errors**
+- Ensure backend is running (`python run_server.py`)
+- Check firewall settings
+- Verify correct port in `SERVER_PORT`
 
 ### Debug Mode
 
-Enable debug mode for additional logging:
-
+Enable detailed logging:
 ```bash
-VITE_ENABLE_DEBUG_MODE=true
-VITE_LOG_LEVEL=debug
+LOG_LEVEL=DEBUG
+ENABLE_DEBUG_MODE=true
 ```
 
-### Environment Validation
+Check logs for:
+- API request/response details
+- WebSocket connection status
+- Generation phase progress
 
-The application will log environment configuration in development mode. Check the browser console for:
+## 🔒 Security Best Practices
 
-```
-🌍 Environment Configuration
-Mode: development
-App Title: AI Genesis Engine
-Features: { AI_GENERATION: true, ... }
-```
+1. **API Keys**
+   - Never commit `.env` files
+   - Use environment-specific keys
+   - Rotate keys regularly
+   - Monitor usage in Anthropic Console
 
-## Security Best Practices
+2. **Production**
+   - Enable HTTPS
+   - Use environment variables, not files
+   - Implement proper authentication
+   - Set rate limiting appropriately
 
-1. **Never commit `.env` files** to version control
-2. **Use different API keys** for development and production
-3. **Rotate API keys regularly**
-4. **Use service role keys sparingly** and only on the server-side
-5. **Enable RLS (Row Level Security)** in Supabase for production
-6. **Monitor API usage** to detect unauthorized access
+3. **Development**
+   - Use `.env.example` as template
+   - Add `.env` to `.gitignore`
+   - Use mock mode for testing
 
-## Getting Help
+## 📚 Additional Resources
 
-If you're having trouble with environment setup:
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [Anthropic API Reference](https://docs.anthropic.com/)
+- [Project README](README.md)
+- [Competition Guide](COMPETITION_GUIDE.md)
 
-1. Check the browser console for error messages
-2. Verify all required variables are set in your `.env` file
-3. Compare your `.env` file with `env.template`
-4. Check the network tab for failed API requests
-5. Enable debug mode for more detailed logging
+## 💡 Tips
 
-## Example .env File
+- Start with minimal `.env` (just API key)
+- Use mock mode for UI development
+- Monitor API usage to avoid limits
+- Test with various game prompts
+- Keep generated games organized
 
-Here's a minimal `.env` file to get started:
+---
 
-```bash
-# Basic configuration
-NODE_ENV=development
-VITE_APP_TITLE="My AI Genesis Engine"
-
-# Supabase (required)
-VITE_SUPABASE_URL=https://abcdefghijklmnop.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-
-# AI Services (required for generation features)
-ANTHROPIC_API_KEY=sk-ant-api03-...
-
-# Feature flags
-VITE_ENABLE_DEBUG_MODE=true
-```
-
-Copy this structure and fill in your actual values to get started quickly. 
+Need help? Check the [README](README.md) or open an issue! 

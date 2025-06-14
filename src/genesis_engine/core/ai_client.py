@@ -8,7 +8,12 @@ import json
 import aiohttp
 import asyncio
 import re
-from typing import Optional
+from typing import Optional, Dict, Any
+import logging
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 class AIClient:
     """
@@ -21,8 +26,14 @@ class AIClient:
         # Try multiple sources for the API key
         self.api_key = self._get_api_key()
         self.base_url = "https://api.anthropic.com/v1/messages"
-        self.model = "claude-opus-4-20250514"  # Using Claude 3 Opus for now
+        # Try to use model from config, fallback to default
+        try:
+            from ..config import settings
+            self.model = settings.anthropic_model
+        except ImportError:
+            self.model = "claude-opus-4-20250514"  # Claude 4 Opus - latest model
         self.use_mock = not bool(self.api_key)
+        self.timeout = aiohttp.ClientTimeout(total=60)  # 60 second timeout
         
         if self.use_mock:
             print("⚠️  No Anthropic API key found. Using mock responses for testing.")
@@ -39,15 +50,28 @@ class AIClient:
         # Try Supabase secrets via the get-secret function
         try:
             import subprocess
-            result = subprocess.run([
-                'supabase', 'functions', 'invoke', 'get-secret',
-                '--data', '{"name":"ANTHROPIC_API_KEY"}'
-            ], capture_output=True, text=True, timeout=10)
+            import shlex
             
-            if result.returncode == 0:
-                response = json.loads(result.stdout)
-                return response.get('value')
-        except:
+            # Properly escape the JSON data to prevent injection
+            json_data = json.dumps({"name": "ANTHROPIC_API_KEY"})
+            cmd = ['supabase', 'functions', 'invoke', 'get-secret', '--data', json_data]
+            
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False  # Don't raise on non-zero exit
+            )
+            
+            if result.returncode == 0 and result.stdout:
+                try:
+                    response = json.loads(result.stdout)
+                    return response.get('value')
+                except json.JSONDecodeError:
+                    pass
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            # Supabase CLI not installed or command timed out
             pass
             
         return None
@@ -60,19 +84,49 @@ class AIClient:
         """
         print(f"🧹 Cleaning AI response (length: {len(response)})")
         
-        # Step 1: Remove all markdown code blocks (multiple patterns)
+        # Step 1: Aggressive markdown removal
+        # Remove everything before the first import statement
+        lines = response.split('\n')
+        
+        # Find first line that starts with import/from
+        first_code_line = 0
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped.startswith(('import ', 'from ')) and not stripped.startswith('```'):
+                first_code_line = i
+                break
+        
+        # If we found Python code, start from there
+        if first_code_line > 0:
+            response = '\n'.join(lines[first_code_line:])
+        
+        # Remove any remaining markdown patterns
         patterns_to_remove = [
-            r'```python\s*\n?',
-            r'```\s*python\s*\n?',
-            r'```\s*\n?',
-            r'^```.*\n',  # Remove any line starting with ```
-            r'\n```.*$',  # Remove any line ending with ```
+            r'```[a-zA-Z]*\n?',    # Code block starts
+            r'```\n?',             # Code block ends
+            r'^```.*$',            # Any line with just backticks
+            r'^\s*```.*$',         # Lines with whitespace then backticks
         ]
         
         for pattern in patterns_to_remove:
             response = re.sub(pattern, '', response, flags=re.MULTILINE)
         
-        # Step 2: Remove any explanatory text before Python code
+        # Remove any lines that are just backticks or markdown
+        lines = response.split('\n')
+        clean_lines = []
+        
+        for line in lines:
+            # Skip any lines with backticks or markdown
+            if '```' in line or line.strip().startswith('#') and not line.strip().startswith('# '):
+                continue
+            # Skip empty lines at the beginning
+            if not clean_lines and not line.strip():
+                continue
+            clean_lines.append(line)
+        
+        response = '\n'.join(clean_lines)
+        
+        # Step 3: Find the first valid Python line
         lines = response.split('\n')
         python_start_idx = 0
         
@@ -81,54 +135,86 @@ class AIClient:
             stripped = line.strip()
             if (stripped.startswith('import ') or 
                 stripped.startswith('from ') or
-                stripped.startswith('# ') or
+                stripped.startswith('#') or
                 stripped.startswith('"""') or
                 stripped.startswith('class ') or
                 stripped.startswith('def ') or
-                stripped.startswith('if __name__')):
+                stripped.startswith('if __name__') or
+                stripped.startswith('try:') or
+                stripped.startswith('with ')):
                 python_start_idx = i
                 break
         
         # Keep only Python code
         response = '\n'.join(lines[python_start_idx:])
         
-        # Step 3: Remove trailing markdown or explanations
+        # Step 4: Remove trailing non-Python content
         lines = response.split('\n')
         python_end_idx = len(lines)
         
-        # Find where Python code ends (look for markdown or explanations)
+        # Find where Python code ends
         for i in range(len(lines) - 1, -1, -1):
             line = lines[i].strip()
-            if line and not line.startswith('#') and not line.startswith('```'):
+            # If we find a line with just backticks or markdown, stop there
+            if '```' in line or (line and not any(c in line for c in '()[]{}=#"\'')):
+                python_end_idx = i
+                break
+            # If we find valid Python, keep going
+            elif line and any(c in line for c in '()[]{}=#"\''):
                 python_end_idx = i + 1
                 break
                 
         response = '\n'.join(lines[:python_end_idx])
         
-        # Step 4: Final cleanup
+        # Step 5: Final cleanup
         response = response.strip()
         
-        # Step 5: Validation - ensure it starts with valid Python
+        # Step 6: Validation - ensure it starts with valid Python
         if not response:
             print("⚠️  Empty response after cleaning!")
             return self._get_fallback_python_code()
             
         first_line = response.split('\n')[0].strip()
-        valid_starts = ['import', 'from', '#', '"""', 'class', 'def', 'if', 'try', 'with']
+        valid_starts = ['import', 'from', '#', '"""', "'''", 'class', 'def', 'if', 'try', 'with', '__']
         
         if not any(first_line.startswith(start) for start in valid_starts):
             print(f"⚠️  Response doesn't start with valid Python: '{first_line}'")
-            # Try to find and extract just the Python part
-            for line in response.split('\n'):
-                if any(line.strip().startswith(start) for start in valid_starts):
-                    idx = response.find(line)
-                    response = response[idx:]
-                    break
-            else:
+            return self._get_fallback_python_code()
+        
+        # Step 7: Final syntax validation
+        try:
+            compile(response, '<generated_code>', 'exec')
+            print("✅ Code cleaned and validated successfully")
+        except SyntaxError as e:
+            print(f"⚠️  Syntax error after cleaning: {e}")
+            print(f"Error at line {e.lineno}: {e.text}")
+            # Try one more aggressive cleaning
+            response = self._aggressive_clean(response)
+            try:
+                compile(response, '<generated_code>', 'exec')
+                print("✅ Aggressive cleaning succeeded")
+            except:
+                print("❌ Unable to clean code properly, using fallback")
                 return self._get_fallback_python_code()
         
-        print(f"✅ Code cleaned successfully (final length: {len(response)})")
         return response
+    
+    def _aggressive_clean(self, response: str) -> str:
+        """More aggressive cleaning for stubborn cases."""
+        lines = response.split('\n')
+        clean_lines = []
+        
+        for line in lines:
+            # Remove any line containing markdown indicators
+            if '```' in line or line.strip().startswith('**') or line.strip().startswith('##'):
+                continue
+            # Remove lines that look like prose
+            if line.strip() and not any(char in line for char in '()[]{}=:#"\','):
+                if not line.strip().startswith(('import', 'from', 'class', 'def')):
+                    continue
+            clean_lines.append(line)
+        
+        return '\n'.join(clean_lines)
     
     def _get_fallback_python_code(self) -> str:
         """Return a minimal working Python game as fallback."""
@@ -188,11 +274,13 @@ pygame.quit()
 sys.exit()
 '''
 
-    def _make_api_call(self, messages: list) -> str:
-        """Make an async API call to Claude."""
-        if self.use_mock:
-            return self._get_mock_response(messages[0]['content'])
-        
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        reraise=True
+    )
+    async def _make_api_call_with_retry(self, messages: list) -> str:
+        """Make an API call with retry logic."""
         headers = {
             'Content-Type': 'application/json',
             'x-api-key': self.api_key,
@@ -201,21 +289,38 @@ sys.exit()
         
         payload = {
             'model': self.model,
-            'max_tokens': 4000,
-            'messages': messages
+            'max_tokens': 4096,  # Increased for complete game generation
+            'messages': messages,
+            'temperature': 0.7  # Balanced creativity and consistency
         }
         
+        async with aiohttp.ClientSession(timeout=self.timeout) as session:
+            async with session.post(self.base_url, headers=headers, json=payload) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return data['content'][0]['text']
+                elif response.status == 429:
+                    # Rate limited - retry after delay
+                    retry_after = response.headers.get('Retry-After', 5)
+                    logger.warning(f"Rate limited. Retrying after {retry_after} seconds")
+                    await asyncio.sleep(int(retry_after))
+                    raise Exception("Rate limited")
+                else:
+                    error_text = await response.text()
+                    error_msg = f"API call failed: {response.status} - {error_text}"
+                    logger.error(error_msg)
+                    raise Exception(error_msg)
+    
+    async def _make_api_call(self, messages: list) -> str:
+        """Make an async API call to Claude with fallback to mock."""
+        if self.use_mock:
+            return self._get_mock_response(messages[0]['content'])
+        
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(self.base_url, headers=headers, json=payload) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        return data['content'][0]['text']
-                    else:
-                        error_text = await response.text()
-                        raise Exception(f"API call failed: {response.status} - {error_text}")
+            return await self._make_api_call_with_retry(messages)
         except Exception as e:
-            print(f"❌ API call failed, falling back to mock: {e}")
+            logger.error(f"All API attempts failed: {e}")
+            print(f"❌ API call failed after retries, falling back to mock: {e}")
             return self._get_mock_response(messages[0]['content'])
     
     def _run_async(self, coro):
