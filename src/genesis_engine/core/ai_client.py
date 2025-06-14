@@ -1,6 +1,7 @@
+
 """
 AI Client for the Genesis Engine.
-Handles all interactions with Claude 4 Opus API with fallback to mock data.
+Handles all interactions with Claude 4 Opus API with fallback to Claude 4 Sonnet, then mock data.
 Enhanced with better code validation to prevent recurring syntax errors.
 """
 import os
@@ -8,7 +9,7 @@ import json
 import aiohttp
 import asyncio
 import re
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import logging
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -17,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 class AIClient:
     """
-    Client for interacting with Anthropic's Claude 4 Opus API.
-    Falls back to mock responses if API is unavailable.
+    Client for interacting with Anthropic's Claude API.
+    Falls back through model hierarchy: Opus → Sonnet → Mock responses.
     Enhanced with code validation to prevent syntax errors.
     """
     
@@ -26,12 +27,24 @@ class AIClient:
         # Try multiple sources for the API key
         self.api_key = self._get_api_key()
         self.base_url = "https://api.anthropic.com/v1/messages"
-        # Try to use model from config, fallback to default
+        
+        # Model fallback hierarchy
+        self.model_hierarchy = [
+            "claude-opus-4-20250514",    # Primary: Claude 4 Opus
+            "claude-sonnet-4-20250514"   # Fallback: Claude 4 Sonnet
+        ]
+        self.current_model_index = 0
+        
+        # Try to use models from config, fallback to defaults
         try:
             from ..config import settings
-            self.model = settings.anthropic_model
+            if hasattr(settings, 'anthropic_model'):
+                # If config specifies a model, put it first in hierarchy
+                if settings.anthropic_model not in self.model_hierarchy:
+                    self.model_hierarchy.insert(0, settings.anthropic_model)
         except ImportError:
-            self.model = "claude-opus-4-20250514"  # Claude 4 Opus - latest model
+            pass
+        
         self.use_mock = not bool(self.api_key)
         self.timeout = aiohttp.ClientTimeout(total=60)  # 60 second timeout
         
@@ -39,6 +52,7 @@ class AIClient:
             print("⚠️  No Anthropic API key found. Using mock responses for testing.")
         else:
             print("✅ Anthropic API key found. Using real AI integration.")
+            print(f"🎯 Model hierarchy: {' → '.join(self.model_hierarchy)} → Mock")
     
     def _get_api_key(self) -> Optional[str]:
         """Get API key from multiple sources."""
@@ -275,12 +289,12 @@ sys.exit()
 '''
 
     @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
+        stop=stop_after_attempt(2),  # Reduced retries per model
+        wait=wait_exponential(multiplier=1, min=2, max=5),
         reraise=True
     )
-    async def _make_api_call_with_retry(self, messages: list) -> str:
-        """Make an API call with retry logic."""
+    async def _make_api_call_with_retry(self, messages: list, model: str) -> str:
+        """Make an API call with retry logic for a specific model."""
         headers = {
             'Content-Type': 'application/json',
             'x-api-key': self.api_key,
@@ -288,7 +302,7 @@ sys.exit()
         }
         
         payload = {
-            'model': self.model,
+            'model': model,
             'max_tokens': 4096,  # Increased for complete game generation
             'messages': messages,
             'temperature': 0.7  # Balanced creativity and consistency
@@ -302,26 +316,37 @@ sys.exit()
                 elif response.status == 429:
                     # Rate limited - retry after delay
                     retry_after = response.headers.get('Retry-After', 5)
-                    logger.warning(f"Rate limited. Retrying after {retry_after} seconds")
+                    logger.warning(f"Rate limited on {model}. Retrying after {retry_after} seconds")
                     await asyncio.sleep(int(retry_after))
-                    raise Exception("Rate limited")
+                    raise Exception(f"Rate limited on {model}")
                 else:
                     error_text = await response.text()
-                    error_msg = f"API call failed: {response.status} - {error_text}"
+                    error_msg = f"API call failed for {model}: {response.status} - {error_text}"
                     logger.error(error_msg)
                     raise Exception(error_msg)
     
     async def _make_api_call(self, messages: list) -> str:
-        """Make an async API call to Claude with fallback to mock."""
+        """Make an async API call with model fallback hierarchy."""
         if self.use_mock:
             return self._get_mock_response(messages[0]['content'])
         
-        try:
-            return await self._make_api_call_with_retry(messages)
-        except Exception as e:
-            logger.error(f"All API attempts failed: {e}")
-            print(f"❌ API call failed after retries, falling back to mock: {e}")
-            return self._get_mock_response(messages[0]['content'])
+        # Try each model in the hierarchy
+        for i, model in enumerate(self.model_hierarchy):
+            try:
+                print(f"🤖 Trying {model}...")
+                result = await self._make_api_call_with_retry(messages, model)
+                if i > 0:
+                    print(f"✅ Successfully used fallback model: {model}")
+                return result
+            except Exception as e:
+                logger.warning(f"Model {model} failed: {e}")
+                print(f"⚠️  {model} unavailable, trying next model...")
+                continue
+        
+        # All models failed, fall back to mock
+        logger.error("All AI models failed, falling back to mock data")
+        print("❌ All AI models failed, falling back to mock data")
+        return self._get_mock_response(messages[0]['content'])
     
     def _run_async(self, coro):
         """Safely run async code, handling existing event loops."""
