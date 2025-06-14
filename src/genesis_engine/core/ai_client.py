@@ -80,6 +80,20 @@ class AIClient:
             print(f"❌ API call failed, falling back to mock: {e}")
             return self._get_mock_response(messages[0]['content'])
     
+    def _run_async(self, coro):
+        """Safely run async code, handling existing event loops."""
+        try:
+            # Try to get the current event loop
+            loop = asyncio.get_running_loop()
+            # If we're in an existing loop, we need to use a different approach
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, coro)
+                return future.result()
+        except RuntimeError:
+            # No running loop, safe to use asyncio.run
+            return asyncio.run(coro)
+    
     def generate_game_design_document(self, prompt: str) -> str:
         """Generate a comprehensive Game Design Document."""
         messages = [{
@@ -98,7 +112,7 @@ The GDD should include:
 Format as Markdown. Be creative and detailed."""
         }]
         
-        return asyncio.run(self._make_api_call(messages))
+        return self._run_async(self._make_api_call(messages))
     
     def generate_technical_plan(self, gdd_content: str) -> str:
         """Generate technical implementation plan."""
@@ -118,7 +132,7 @@ Create a technical plan that includes:
 Format as Markdown. Focus on Python/Pygame implementation."""
         }]
         
-        return asyncio.run(self._make_api_call(messages))
+        return self._run_async(self._make_api_call(messages))
     
     def generate_asset_specifications(self, gdd_content: str) -> str:
         """Generate detailed asset specifications."""
@@ -137,7 +151,7 @@ Create asset specifications that include:
 Format as Markdown. Be specific about colors, sizes, and styles."""
         }]
         
-        return asyncio.run(self._make_api_call(messages))
+        return self._run_async(self._make_api_call(messages))
     
     def generate_game_code(self, gdd_content: str, tech_plan: str) -> str:
         """Generate complete game code."""
@@ -162,7 +176,7 @@ Requirements:
 Generate ONLY the Python code, no explanations."""
         }]
         
-        return asyncio.run(self._make_api_call(messages))
+        return self._run_async(self._make_api_call(messages))
     
     def _get_mock_response(self, prompt: str) -> str:
         """Fallback mock responses for testing."""

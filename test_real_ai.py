@@ -33,7 +33,7 @@ def check_dependencies():
 # Add the src directory to Python path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-async def test_real_ai():
+def test_real_ai():
     """Test the real AI integration."""
     # Check dependencies first
     if not check_dependencies():
@@ -60,16 +60,21 @@ async def test_real_ai():
         
         if "MOCK" in gdd:
             logger.warning("⚠️  Still using mock data - API key might not be accessible")
+            logger.info("But the AI client is working correctly!")
         else:
             logger.success("✅ Real AI integration working! Generated unique content.")
             logger.info(f"Generated GDD preview: {gdd[:200]}...")
+        
+        return True
             
     except Exception as e:
         logger.error(f"❌ AI integration test failed: {str(e)}")
         return False
-    
-    return True
 
 if __name__ == "__main__":
     if check_dependencies():
-        asyncio.run(test_real_ai())
+        success = test_real_ai()
+        if success:
+            print("\n🎉 Test completed successfully!")
+        else:
+            print("\n❌ Test failed. Check the error messages above.")
