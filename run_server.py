@@ -1,17 +1,11 @@
+
 #!/usr/bin/env python3
 """
-Run the AI Genesis Engine Web Server
+Run the AI Genesis Engine FastAPI Server
 Provides API endpoints for the React frontend.
 """
 import sys
 import uvicorn
-try:
-    from src.genesis_engine.config import settings, COMPETITION_NAME
-except ImportError:
-    # Handle running from different directory structures
-    import sys
-    sys.path.append('.')
-    from src.genesis_engine.config import settings, COMPETITION_NAME
 
 def main():
     """Start the FastAPI server."""
@@ -21,19 +15,19 @@ def main():
     ║    Transform Ideas into Playable Games   ║
     ╚══════════════════════════════════════════╝
     
-    🚀 Starting server on http://{settings.server_host}:{settings.server_port}
-    📡 API docs available at http://localhost:{settings.server_port}/docs
-    🎮 Competition: {COMPETITION_NAME}
-    🤖 Model: {settings.anthropic_model}
+    🚀 Starting server on http://localhost:8000
+    📡 API docs available at http://localhost:8000/docs
+    🎮 Competition: $40,000 AI Showdown
+    🤖 AI Model: Claude 4 Opus with Sonnet fallback
     """)
     
     # Run the server
     uvicorn.run(
         "src.genesis_engine.web_server:app",
-        host=settings.server_host,
-        port=settings.server_port,
+        host="0.0.0.0",
+        port=8000,
         reload=True,  # Enable auto-reload in development
-        log_level=settings.log_level.lower()
+        log_level="info"
     )
 
 if __name__ == "__main__":
@@ -44,4 +38,4 @@ if __name__ == "__main__":
         sys.exit(0)
     except Exception as e:
         print(f"\n❌ Server error: {e}")
-        sys.exit(1) 
+        sys.exit(1)
