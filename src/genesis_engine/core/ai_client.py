@@ -424,6 +424,7 @@ Format as Markdown. Focus on Python/Pygame implementation. Be specific but conci
     
     def generate_asset_specifications(self, gdd_content: str) -> str:
         """Generate detailed asset specifications."""
+        # Asset generation is simpler - can start with faster model
         messages = [{
             'role': 'user',
             'content': f"""Based on this Game Design Document, create detailed asset specifications:
@@ -438,6 +439,19 @@ Create asset specifications that include:
 
 Format as Markdown. Be specific about colors, sizes, and styles. Keep it concise."""
         }]
+        
+        # For simpler tasks like asset specs, we can start with Haiku for speed
+        if not self.use_mock:
+            # Temporarily prioritize Haiku for this simpler task
+            original_hierarchy = self.model_hierarchy.copy()
+            if "claude-3-5-haiku-20241022" in self.model_hierarchy:
+                self.model_hierarchy = ["claude-3-5-haiku-20241022"] + [m for m in original_hierarchy if m != "claude-3-5-haiku-20241022"]
+            
+            result = self._run_async(self._make_api_call(messages))
+            
+            # Restore original hierarchy
+            self.model_hierarchy = original_hierarchy
+            return result
         
         return self._run_async(self._make_api_call(messages))
     
