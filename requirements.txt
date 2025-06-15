@@ -1,45 +1,45 @@
 # AI Genesis Engine Dependencies
 
-# Core Python dependencies
-python-dotenv>=1.0.0
-setuptools>=65.0.0
+# Core AI Integration
+anthropic==0.21.3
+openai==1.35.3
 
-# Async HTTP client
+# Web Framework & Server
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+gunicorn==21.2.0
+websockets==12.0
+aiofiles==24.1.0
+python-multipart==0.0.9
 aiohttp>=3.9.0
-aiofiles>=23.0.0
 
-# AI Integration
-anthropic>=0.8.0
+# Data Validation & Settings
+pydantic==2.7.1
+pydantic-settings==2.3.1
+typing-extensions==4.12.2
 
-# Web Framework
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-python-multipart>=0.0.6
-websockets>=12.0
+# Game Development
+pygame==2.6.0
+Pillow==10.3.0
+numpy==1.26.4
 
-# Supabase (optional)
-supabase>=2.0.0
+# Environment & Setup
+python-dotenv==1.0.1
+setuptools==70.1.0
 
 # Retry and resilience
 tenacity>=8.2.0
 
-# Testing
-pytest>=7.0.0
-pytest-asyncio>=0.21.0
-pytest-mock>=3.11.0
-
-# Game dependencies (for generated games)
-pygame>=2.5.0
-
-# Type checking and validation
-pydantic>=2.0.0
-pydantic-settings>=2.0.0
-typing_extensions>=4.8.0
-
 # Logging and monitoring
 structlog>=23.0.0
 
-# Development tools
+# Optional: Supabase
+supabase>=2.0.0
+
+# Development tools (optional)
 black>=23.0.0
 flake8>=6.0.0
 mypy>=1.0.0
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.11.0
