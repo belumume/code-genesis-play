@@ -2,16 +2,10 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Download, X, Play } from 'lucide-react';
-
-interface GeneratedFile {
-  name: string;
-  path: string;
-  content: string;
-  type: 'python' | 'markdown' | 'other';
-}
+import { Badge } from '@/components/ui/badge';
+import { Download, FileText } from 'lucide-react';
+import type { GeneratedFile } from '@/types/game';
 
 interface FileViewerProps {
   file: GeneratedFile | null;
@@ -23,87 +17,60 @@ interface FileViewerProps {
 export function FileViewer({ file, isOpen, onClose, onDownload }: FileViewerProps) {
   if (!file) return null;
 
-  const isGameFile = file.name === 'game.html' || file.name.endsWith('.html');
-
-  const handlePlayGame = () => {
-    const blob = new Blob([file.content], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
-  };
-
-  const getLanguageFromType = (type: string, fileName: string) => {
-    if (fileName.endsWith('.html')) return 'html';
-    if (fileName.endsWith('.js')) return 'javascript';
-    if (fileName.endsWith('.py')) return 'python';
-    if (fileName.endsWith('.md')) return 'markdown';
-    if (type === 'python') return 'python';
-    if (type === 'markdown') return 'markdown';
-    return 'text';
+  const getLanguageFromType = (type: string) => {
+    switch (type) {
+      case 'html':
+        return 'html';
+      case 'markdown':
+        return 'markdown';
+      case 'python':
+        return 'python';
+      default:
+        return 'text';
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <DialogTitle>{file.name}</DialogTitle>
-              <Badge variant="secondary">
-                {getLanguageFromType(file.type, file.name)}
-              </Badge>
-              <Badge variant="outline">
-                {file.content.split('\n').length} lines
-              </Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              {isGameFile && (
-                <Button
-                  size="sm"
-                  onClick={handlePlayGame}
-                  className="flex items-center gap-2"
-                >
-                  <Play className="h-4 w-4" />
-                  Play Game
-                </Button>
-              )}
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onDownload(file)}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Download
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={onClose}
-                className="h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+      <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            {file.name}
+            <Badge variant="outline" className="text-xs">
+              {file.type}
+            </Badge>
+          </DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 min-h-0">
-          <ScrollArea className="h-full w-full rounded-md border">
-            <div className="p-4">
-              <pre className="text-sm font-mono whitespace-pre-wrap break-words">
-                <code>{file.content}</code>
-              </pre>
-            </div>
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-[60vh] w-full rounded-md border p-4">
+            <pre className="text-sm">
+              <code className={`language-${getLanguageFromType(file.type)}`}>
+                {file.content}
+              </code>
+            </pre>
           </ScrollArea>
         </div>
         
-        {isGameFile && (
-          <div className="flex-shrink-0 p-4 bg-muted rounded-md">
-            <p className="text-sm text-muted-foreground">
-              💡 This is a playable HTML5 game! Click "Play Game" to open it in a new tab and start playing.
-            </p>
+        <div className="flex justify-between items-center pt-4">
+          <div className="text-sm text-muted-foreground">
+            {file.content.length} characters
           </div>
-        )}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => onDownload(file)}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Download
+            </Button>
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
