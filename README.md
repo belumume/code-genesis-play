@@ -1,3 +1,58 @@
+# 🚀 AI Genesis Engine
+
+> **Transform single-sentence prompts into complete, playable 2D games using Claude AI**
+
+## 🎮 Live Demo on Lovable Platform
+
+**[Try it now at ai-genesis-engine.lovable.app →](https://ai-genesis-engine.lovable.app)**
+
+### What This Demo Shows:
+- 🤖 **Real-time AI code generation** - Watch as Claude AI creates an entire game from scratch
+- 📝 **Complete source code** - View every file as it's generated (main.py, game logic, documentation)
+- 🎨 **Smart game design** - AI creates game design documents, technical plans, and asset specifications
+- ⚡ **Instant download** - Get the complete game project to run locally with Python
+
+### How to Use the Demo:
+1. **Enter a game idea** - Type any game concept in one sentence (e.g., "A space shooter where you dodge asteroids")
+2. **Click Generate** - Watch the AI work through design, planning, and coding phases
+3. **Explore the code** - Click on generated files to view the complete source code
+4. **Download & play** - Download the game files and run locally with `python main.py` (requires Python + pygame)
+
+### 🏆 Built for the Lovable AI Showdown
+This project showcases the power of Claude 4 Opus in autonomous software creation, demonstrating how AI can be a true creative partner in game development.
+
+---
+
+## 🚀 Quick Backend Deployment (For Competition)
+
+Since Lovable only supports frontend apps, deploy your Python backend to Railway in 5 minutes:
+
+### Step 1: Deploy to Railway
+1. **Sign up** at [Railway.app](https://railway.app/)
+2. **Install Railway CLI**: `npm install -g @railway/cli`
+3. **Login**: `railway login`
+4. **Deploy**:
+   ```bash
+   cd ai-genesis-engine
+   railway up
+   ```
+5. **Get your URL**: After deployment, Railway will show your app URL (e.g., `https://ai-genesis-engine.railway.app`)
+
+### Step 2: Update Lovable Frontend
+In your Lovable project, update the environment variables:
+1. Open your project settings in Lovable
+2. Add these environment variables:
+   ```
+   VITE_API_BASE_URL=https://your-app.railway.app
+   VITE_WS_BASE_URL=wss://your-app.railway.app
+   ```
+3. Redeploy your Lovable app
+
+### Step 3: PROFIT! 💰
+Your AI Genesis Engine now runs with REAL AI generation, not mocks!
+
+---
+
 # 🎮 AI Genesis Engine
 
 <div align="center">

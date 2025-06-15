@@ -1,4 +1,3 @@
-
 """
 FastAPI Web Server for AI Genesis Engine
 Bridges the React frontend with the Python Genesis Engine backend.
@@ -34,7 +33,14 @@ app = FastAPI(
 # CORS middleware for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"],
+    allow_origins=[
+        "http://localhost:8080", 
+        "http://127.0.0.1:8080",
+        "http://localhost:5173",
+        "https://*.lovable.app",
+        "https://lovable.app",
+        os.getenv("FRONTEND_URL", "").strip()  # Allow custom frontend URL
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -94,6 +100,28 @@ class WebSocketLogger(EngineLogger):
                 )
             except Exception as e:
                 logger.error(f"Failed to send WebSocket update: {e}")
+    
+    def send_file_creation(self, file_path: str, content: str):
+        """Send file creation update with content"""
+        if self.session_id in websocket_connections:
+            update = {
+                "session_id": self.session_id,
+                "type": "FILE_CREATED",
+                "phase": "CODING",
+                "step": "file_creation",
+                "progress": 0.0,
+                "message": f"Created {file_path}",
+                "timestamp": datetime.now().isoformat(),
+                "file_path": file_path,
+                "file_content": content[:5000] if len(content) > 5000 else content  # Limit size
+            }
+            
+            try:
+                asyncio.create_task(
+                    websocket_connections[self.session_id].send_text(json.dumps(update))
+                )
+            except Exception as e:
+                logger.error(f"Failed to send file creation update: {e}")
     
     def phase(self, phase_name: str, description: str):
         """Override phase method to send WebSocket updates"""
@@ -336,6 +364,58 @@ async def download_game(game_name: str):
         filename=f"{game_name}_main.py",
         media_type="text/plain"
     )
+
+@app.get("/games/{game_name}/files")
+async def get_game_files(game_name: str):
+    """Get all files for a generated game"""
+    game_dir = Path("generated_games") / game_name
+    
+    if not game_dir.exists():
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    files = []
+    for file_path in game_dir.rglob("*"):
+        if file_path.is_file() and file_path.suffix in ['.py', '.md', '.txt']:
+            try:
+                content = file_path.read_text(encoding='utf-8')
+                files.append({
+                    "name": file_path.name,
+                    "path": str(file_path.relative_to(game_dir)),
+                    "content": content,
+                    "type": "python" if file_path.suffix == '.py' else 
+                           "markdown" if file_path.suffix == '.md' else "text"
+                })
+            except Exception as e:
+                logger.warning(f"Could not read file {file_path}: {e}")
+    
+    return {"files": files}
+
+@app.get("/games/{game_name}/play-instructions")
+async def get_play_instructions(game_name: str):
+    """Get instructions for playing the generated game"""
+    game_dir = Path("generated_games") / game_name
+    
+    if not game_dir.exists():
+        raise HTTPException(status_code=404, detail="Game not found")
+        
+    main_py = game_dir / "main.py"
+    readme_md = game_dir / "README.md"
+    
+    instructions = {
+        "game_name": game_name,
+        "has_main": main_py.exists(),
+        "play_command": f"cd generated_games/{game_name} && python main.py",
+        "requirements": ["Python 3.7+", "pygame library"],
+        "install_command": "pip install pygame"
+    }
+    
+    if readme_md.exists():
+        try:
+            instructions["readme"] = readme_md.read_text(encoding='utf-8')
+        except:
+            pass
+            
+    return instructions
 
 if __name__ == "__main__":
     import uvicorn

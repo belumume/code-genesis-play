@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     enable_websockets: bool = Field(True, env="ENABLE_WEBSOCKETS")
     enable_game_download: bool = Field(True, env="ENABLE_GAME_DOWNLOAD")
     
+    # Lovable Platform Note: Set ENABLE_MOCK_MODE=true for Lovable deployment
+    # since Lovable doesn't support Python backends
+    
     # Security
     enable_rate_limiting: bool = Field(True, env="ENABLE_RATE_LIMITING")
     rate_limit_requests: int = Field(10, env="RATE_LIMIT_REQUESTS")

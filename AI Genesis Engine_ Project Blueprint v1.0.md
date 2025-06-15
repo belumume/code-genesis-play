@@ -192,7 +192,7 @@ The "UI" for the Genesis Engine itself is the command line. It is designed for s
 * **Dependency Management:** The only external dependency for the generated game is pygame. This reduces supply-chain risk.  
 * **No eval():** The agent must be explicitly forbidden from using eval() or any similar function that executes arbitrary strings as code. All code must be written to files and executed explicitly by the user.
 
-## **9\. AI Agent Collaboration Rules (For IDE Integration)**
+## **9. AI Agent Collaboration Rules (For IDE Integration)**
 
 1. **Rule of Primacy:** You are an expert game designer and Python engineer. Your primary model is **Claude 4 Opus**. All reasoning, planning, and code generation must originate from you.  
 2. **Rule of Documentation First:** You must ALWAYS generate or update the relevant design document (GDD.md, TECH\_PLAN.md) before writing any corresponding application code.  
@@ -204,3 +204,90 @@ The "UI" for the Genesis Engine itself is the command line. It is designed for s
 8. **Rule of Safe Execution:** You are forbidden from using eval(), exec(), or any command-line execution functions (os.system, subprocess.run) unless explicitly sandboxed and approved.  
 9. **Rule of Pause and Verify:** After completing a major feature as defined in the TECH\_PLAN.md, you will halt execution and state "PAUSE: Feature \[X\] complete. Awaiting verification from Project Lead."  
 10. **Rule of Focused Debugging:** When presented with an error, your sole focus is to identify the root cause and provide a complete, corrected version of the file(s) that contained the error. Do not introduce new features during a debugging session.
+
+## **10. Future Web Enhancement Architecture (Phase 2)**
+
+### **10.1. Browser-Based Gameplay**
+
+* **Dual Generation Mode:** 
+  * **Legacy Mode:** Python/Pygame for local execution (current)
+  * **Web Mode:** JavaScript/HTML5 Canvas for browser execution
+  * Agent generates both versions or transpiles Python to JavaScript
+
+* **Web Game Engine Stack:**
+  * **Frontend:** JavaScript + HTML5 Canvas or WebGL
+  * **Libraries:** Phaser.js, PixiJS, or custom lightweight engine
+  * **Asset Pipeline:** Base64-embedded assets or CDN hosting
+
+* **Technical Implementation:**
+```python
+class WebGameGenerator:
+    def generate_web_game(self, prompt: str) -> WebGameProject:
+        # Generate game logic in JavaScript instead of Python
+        # Create HTML5 canvas-based rendering
+        # Embed all assets as base64 or use web-compatible formats
+        pass
+```
+
+### **10.2. Real-Time Development Streaming**
+
+* **Enhanced WebSocket Architecture:**
+```typescript
+interface DevStreamUpdate {
+    type: 'FILE_CREATED' | 'CODE_WRITTEN' | 'ASSET_GENERATED';
+    file_path: string;
+    content: string;
+    line_by_line?: string[];
+    timestamp: string;
+}
+```
+
+* **Live Code Visualization:**
+  * Stream individual lines of code as they're generated
+  * Syntax highlighting in real-time
+  * Visual diff showing code evolution
+  * File tree updates as project structure forms
+
+* **Interactive Development View:**
+  * Split-screen: Code generation (left) + Live preview (right)
+  * Embedded game preview updates as features are implemented
+  * Real-time asset loading and replacement
+
+### **10.3. Updated Architecture Diagram**
+
+```mermaid
+graph TD
+    A[User: Web Interface] --> B{Genesis Engine Core Loop};
+    B --> C{1. Conceptualize};
+    C --> D[Memory: GDD.md];
+    D --> E{2. Plan & Choose Mode};
+    E --> F{Local Python Mode};
+    E --> G{Web JavaScript Mode};
+    F --> H[Generate Python/Pygame];
+    G --> I[Generate JS/HTML5];
+    H --> J[Local Execution];
+    I --> K[In-Browser Execution];
+    
+    subgraph Real-time Streaming
+        L[WebSocket Server] --> M[File Stream];
+        L --> N[Code Stream];
+        L --> O[Asset Stream];
+        M --> P[Frontend File Viewer];
+        N --> Q[Live Code Editor];
+        O --> R[Asset Preview];
+    end
+```
+
+### **10.4. Updated Technical Requirements**
+
+* **TR4:** Web Mode games will be generated in JavaScript/HTML5
+* **TR5:** Browser compatibility: Chrome 90+, Firefox 88+, Safari 14+
+* **TR6:** Real-time streaming via WebSocket with <100ms latency
+* **TR7:** In-browser game execution without external dependencies
+
+### **10.5. Deployment for Web-First**
+
+* **Frontend:** Deploy React app to Vercel/Netlify
+* **Backend:** Deploy FastAPI to AWS/GCP with WebSocket support
+* **Game Hosting:** Generated games run directly in browser
+* **CDN:** Asset hosting for generated game resources
