@@ -20,9 +20,26 @@ export function useApiConfig(): ApiConfig {
   useEffect(() => {
     async function fetchConfig() {
       try {
+        // Get the current session for authentication
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          // If no session, use fallback URLs
+          setConfig({
+            apiBaseUrl: 'https://ai-genesis-engine.onrender.com',
+            wsBaseUrl: 'wss://ai-genesis-engine.onrender.com',
+            isLoading: false,
+            error: null,
+          });
+          return;
+        }
+
         // Try to get the API URLs from Supabase secrets via edge function
         const { data, error } = await supabase.functions.invoke('get-secret', {
-          body: { names: ['VITE_API_BASE_URL', 'VITE_WS_BASE_URL'] }
+          body: { names: ['VITE_API_BASE_URL', 'VITE_WS_BASE_URL'] },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
         });
 
         if (error) throw error;
@@ -38,7 +55,7 @@ export function useApiConfig(): ApiConfig {
         });
       } catch (err) {
         console.warn('Failed to fetch API config from secrets, using deployed URLs:', err);
-        // Fallback to the deployed URLs we can see from the screenshots
+        // Fallback to the deployed URLs
         setConfig({
           apiBaseUrl: 'https://ai-genesis-engine.onrender.com',
           wsBaseUrl: 'wss://ai-genesis-engine.onrender.com',
