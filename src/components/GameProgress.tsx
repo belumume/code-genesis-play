@@ -1,17 +1,9 @@
-
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
-
-interface ProgressUpdate {
-  type: 'log' | 'result' | 'error';
-  level?: string;
-  message: string;
-  timestamp: string;
-  data?: any;
-}
+import type { ProgressUpdate } from '@/types/game';
 
 interface GameProgressProps {
   logs: ProgressUpdate[];

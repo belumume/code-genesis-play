@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,24 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { FileViewer } from './FileViewer';
 import { Play, Download, FileText, Trophy, Zap } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface GeneratedFile {
-  name: string;
-  path: string;
-  content: string;
-  type: 'html' | 'markdown' | 'other';
-}
-
-interface GameGenerationResult {
-  success: boolean;
-  projectName?: string;
-  projectPath?: string;
-  sessionId?: string;
-  gameFile?: string;
-  debugCycles?: number;
-  error?: string;
-  files?: GeneratedFile[];
-}
+import type { GeneratedFile, GameGenerationResult } from '@/types/game';
 
 interface GameResultProps {
   result: GameGenerationResult;

@@ -1,34 +1,8 @@
-
 import { useState, useCallback } from 'react';
 import { useApiConfig } from './useApiConfig';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-
-interface GeneratedFile {
-  name: string;
-  path: string;
-  content: string;
-  type: 'html' | 'markdown' | 'other';
-}
-
-interface GameGenerationResult {
-  success: boolean;
-  projectName?: string;
-  projectPath?: string;
-  sessionId?: string;
-  gameFile?: string;
-  debugCycles?: number;
-  error?: string;
-  files?: GeneratedFile[];
-}
-
-interface ProgressUpdate {
-  type: 'log' | 'result' | 'error';
-  level?: string;
-  message: string;
-  timestamp: string;
-  data?: any;
-}
+import type { GeneratedFile, GameGenerationResult, ProgressUpdate } from '@/types/game';
 
 export function useGameGeneration() {
   const [isGenerating, setIsGenerating] = useState(false);
