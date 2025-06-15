@@ -1,4 +1,3 @@
-
 """
 AI Client for the Genesis Engine.
 Handles all interactions with Claude 4 Opus API with fallback to Claude 4 Sonnet, then mock data.
@@ -19,7 +18,7 @@ logger = logging.getLogger(__name__)
 class AIClient:
     """
     Client for interacting with Anthropic's Claude API.
-    Falls back through model hierarchy: Opus → Sonnet → Mock responses.
+    Falls back through model hierarchy: Sonnet 4 → Sonnet 3.7 → Haiku 3.5 → Mock responses.
     Enhanced with code validation to prevent syntax errors.
     """
     
@@ -28,10 +27,11 @@ class AIClient:
         self.api_key = self._get_api_key()
         self.base_url = "https://api.anthropic.com/v1/messages"
         
-        # Model fallback hierarchy
+        # Updated model fallback hierarchy for better availability
         self.model_hierarchy = [
-            "claude-opus-4-20250514",    # Primary: Claude 4 Opus
-            "claude-sonnet-4-20250514"   # Fallback: Claude 4 Sonnet
+            "claude-sonnet-4-20250514",     # Primary: Claude 4 Sonnet (high performance, good availability)
+            "claude-3-7-sonnet-20250219",   # Fallback 1: Claude 3.7 Sonnet (extended thinking, reliable)
+            "claude-3-5-haiku-20241022"     # Fallback 2: Claude 3.5 Haiku (fast, highly available)
         ]
         self.current_model_index = 0
         
@@ -46,13 +46,14 @@ class AIClient:
             pass
         
         self.use_mock = not bool(self.api_key)
-        self.timeout = aiohttp.ClientTimeout(total=60)  # 60 second timeout
+        self.timeout = aiohttp.ClientTimeout(total=120)  # Increased timeout for more complex generations
         
         if self.use_mock:
             print("⚠️  No Anthropic API key found. Using mock responses for testing.")
         else:
             print("✅ Anthropic API key found. Using real AI integration.")
-            print(f"🎯 Model hierarchy: {' → '.join(self.model_hierarchy)} → Mock")
+            print(f"🎯 Optimized model hierarchy: {' → '.join(self.model_hierarchy)} → Mock")
+            print("🚀 Prioritizing Sonnet 4 for best balance of capability and availability")
     
     def _get_api_key(self) -> Optional[str]:
         """Get API key from multiple sources."""
@@ -289,8 +290,8 @@ sys.exit()
 '''
 
     @retry(
-        stop=stop_after_attempt(2),  # Reduced retries per model
-        wait=wait_exponential(multiplier=1, min=2, max=5),
+        stop=stop_after_attempt(3),  # Increased retries for better reliability
+        wait=wait_exponential(multiplier=1, min=3, max=10),
         reraise=True
     )
     async def _make_api_call_with_retry(self, messages: list, model: str) -> str:
@@ -301,11 +302,23 @@ sys.exit()
             'anthropic-version': '2023-06-01'
         }
         
+        # Adjust parameters based on model capabilities
+        max_tokens = 8192  # Default for most models
+        temperature = 0.7
+        
+        if "sonnet-4" in model:
+            max_tokens = 64000  # Sonnet 4 supports much larger outputs
+        elif "3-7-sonnet" in model:
+            max_tokens = 64000  # Sonnet 3.7 also supports larger outputs
+        elif "haiku" in model:
+            max_tokens = 8192   # Haiku has standard output limits
+            temperature = 0.5   # Lower temperature for consistency on smaller model
+        
         payload = {
             'model': model,
-            'max_tokens': 4096,  # Increased for complete game generation
+            'max_tokens': max_tokens,
             'messages': messages,
-            'temperature': 0.7  # Balanced creativity and consistency
+            'temperature': temperature
         }
         
         async with aiohttp.ClientSession(timeout=self.timeout) as session:
@@ -315,10 +328,15 @@ sys.exit()
                     return data['content'][0]['text']
                 elif response.status == 429:
                     # Rate limited - retry after delay
-                    retry_after = response.headers.get('Retry-After', 5)
+                    retry_after = response.headers.get('Retry-After', 10)
                     logger.warning(f"Rate limited on {model}. Retrying after {retry_after} seconds")
                     await asyncio.sleep(int(retry_after))
                     raise Exception(f"Rate limited on {model}")
+                elif response.status == 400:
+                    # Bad request - might be model unavailable
+                    error_text = await response.text()
+                    logger.warning(f"Bad request for {model}: {error_text}")
+                    raise Exception(f"Model {model} unavailable or request invalid")
                 else:
                     error_text = await response.text()
                     error_msg = f"API call failed for {model}: {response.status} - {error_text}"
@@ -337,10 +355,12 @@ sys.exit()
                 result = await self._make_api_call_with_retry(messages, model)
                 if i > 0:
                     print(f"✅ Successfully used fallback model: {model}")
+                else:
+                    print(f"✅ Primary model {model} working perfectly")
                 return result
             except Exception as e:
                 logger.warning(f"Model {model} failed: {e}")
-                print(f"⚠️  {model} unavailable, trying next model...")
+                print(f"⚠️  {model} unavailable ({str(e)[:100]}...), trying next model...")
                 continue
         
         # All models failed, fall back to mock
@@ -377,7 +397,7 @@ The GDD should include:
 6. Target Audience
 7. Technical Requirements
 
-Format as Markdown. Be creative and detailed."""
+Format as Markdown. Be creative and detailed, but keep it concise for faster processing."""
         }]
         
         return self._run_async(self._make_api_call(messages))
@@ -397,7 +417,7 @@ Create a technical plan that includes:
 4. Key Technical Challenges
 5. Dependencies and Libraries
 
-Format as Markdown. Focus on Python/Pygame implementation."""
+Format as Markdown. Focus on Python/Pygame implementation. Be specific but concise."""
         }]
         
         return self._run_async(self._make_api_call(messages))
@@ -416,7 +436,7 @@ Create asset specifications that include:
 3. Technical Specifications (dimensions, formats)
 4. Style Guidelines
 
-Format as Markdown. Be specific about colors, sizes, and styles."""
+Format as Markdown. Be specific about colors, sizes, and styles. Keep it concise."""
         }]
         
         return self._run_async(self._make_api_call(messages))
