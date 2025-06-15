@@ -1,9 +1,10 @@
 
+
 export interface GeneratedFile {
   name: string;
   path: string;
   content: string;
-  type: 'html' | 'markdown' | 'other';
+  type: 'html' | 'markdown' | 'other' | 'python';
 }
 
 export interface GameGenerationResult {
@@ -24,3 +25,4 @@ export interface ProgressUpdate {
   timestamp: string;
   data?: any;
 }
+
