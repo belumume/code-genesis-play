@@ -1,4 +1,4 @@
-# AI Genesis Engine Dependencies
+# AI Genesis Engine - Web Server Dependencies
 
 # Core AI Integration
 anthropic==0.21.3
@@ -18,11 +18,6 @@ pydantic==2.7.1
 pydantic-settings==2.3.1
 typing-extensions==4.12.2
 
-# Game Development
-pygame==2.6.0
-Pillow==10.3.0
-numpy==1.26.4
-
 # Environment & Setup
 python-dotenv==1.0.1
 setuptools==70.1.0
@@ -36,10 +31,14 @@ structlog>=23.0.0
 # Optional: Supabase
 supabase>=2.0.0
 
-# Development tools (optional)
-black>=23.0.0
-flake8>=6.0.0
-mypy>=1.0.0
-pytest>=7.0.0
-pytest-asyncio>=0.21.0
-pytest-mock>=3.11.0
+# Development tools (optional - not needed for production)
+# black>=23.0.0
+# flake8>=6.0.0
+# mypy>=1.0.0
+# pytest>=7.0.0
+# pytest-asyncio>=0.21.0
+# pytest-mock>=3.11.0
+
+# Note: pygame, Pillow, and numpy are only needed for GENERATED GAMES
+# These dependencies will be included in the generated game's requirements.txt
+# but are NOT needed for the web server itself
