@@ -10,6 +10,7 @@ import { Loader2, Play, Download, AlertCircle, CheckCircle, FileText, Code, Eye,
 import { toast } from 'sonner';
 import { useApiConfig } from '@/hooks/useApiConfig';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProgressUpdate {
   session_id: string;
