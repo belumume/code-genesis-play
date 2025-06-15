@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import { toast } from 'sonner';
 import { useApiConfig } from '@/hooks/useApiConfig';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 
 interface ProgressUpdate {
   session_id: string;
@@ -180,9 +182,9 @@ export function GameGenerator() {
     }
 
     try {
-      // Create session in database first using proper type casting
+      // Create session in database first with proper typing
       const { data: sessionData, error: sessionError } = await supabase
-        .from('game_sessions' as any)
+        .from('game_sessions')
         .insert({
           user_id: user.id,
           prompt: prompt.trim(),
@@ -191,10 +193,13 @@ export function GameGenerator() {
         .select()
         .single();
 
-      if (sessionError) throw sessionError;
+      if (sessionError) {
+        console.error('Session creation error:', sessionError);
+        throw new Error(`Failed to create session: ${sessionError.message}`);
+      }
       
       if (!sessionData) {
-        throw new Error('Failed to create session');
+        throw new Error('Failed to create session - no data returned');
       }
 
       console.log('Starting generation with API URL:', apiBaseUrl);
@@ -216,14 +221,14 @@ export function GameGenerator() {
 
       const result = await response.json();
       setCurrentSession({
-        session_id: result.session_id,
+        session_id: result.session_id || sessionData.id,
         status: 'started',
         prompt: prompt.trim(),
         created_at: new Date().toISOString(),
         progress_updates: [],
       });
 
-      connectWebSocket(result.session_id);
+      connectWebSocket(result.session_id || sessionData.id);
       toast.success('Game generation started!');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to start generation';
