@@ -24,7 +24,7 @@ export function useApiConfig(): ApiConfig {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
-          // If no session, use fallback URLs
+          // If no session, use production URLs
           setConfig({
             apiBaseUrl: 'https://ai-genesis-engine.onrender.com',
             wsBaseUrl: 'wss://ai-genesis-engine.onrender.com',
@@ -34,7 +34,7 @@ export function useApiConfig(): ApiConfig {
           return;
         }
 
-        // Try to get the API URLs from Supabase secrets via edge function
+        // Security: Try to get the API URLs from Supabase secrets via edge function
         const { data, error } = await supabase.functions.invoke('get-secret', {
           body: { names: ['VITE_API_BASE_URL', 'VITE_WS_BASE_URL'] },
           headers: {
@@ -47,14 +47,26 @@ export function useApiConfig(): ApiConfig {
         const apiBaseUrl = data?.VITE_API_BASE_URL || 'https://ai-genesis-engine.onrender.com';
         const wsBaseUrl = data?.VITE_WS_BASE_URL || 'wss://ai-genesis-engine.onrender.com';
 
+        // Security: Validate URLs before using them
+        try {
+          new URL(apiBaseUrl);
+          new URL(wsBaseUrl.replace('wss://', 'https://').replace('ws://', 'http://'));
+        } catch (urlError) {
+          throw new Error('Invalid API URLs received');
+        }
+
         setConfig({
           apiBaseUrl,
           wsBaseUrl,
           isLoading: false,
           error: null,
         });
+
+        // Security: Don't log sensitive API configuration to console
+        console.info('API configuration loaded successfully');
+        
       } catch (err) {
-        console.warn('Failed to fetch API config from secrets, using deployed URLs:', err);
+        console.warn('Failed to fetch API config from secrets, using deployed URLs');
         // Fallback to the deployed URLs
         setConfig({
           apiBaseUrl: 'https://ai-genesis-engine.onrender.com',

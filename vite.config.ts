@@ -1,3 +1,4 @@
+
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -12,16 +13,19 @@ export default defineConfig(({ command, mode }) => {
   const isDevelopment = mode === 'development';
   const isProduction = mode === 'production';
   
-  // Get server configuration from environment variables
-  const serverPort = parseInt(env.VITE_DEV_SERVER_PORT) || 8080;
-  const serverHost = env.VITE_DEV_SERVER_HOST || "::";
-  
   return {
     server: {
-      host: serverHost,
-      port: serverPort,
+      // Security: Required port configuration for Lovable platform
+      port: 8080,
+      host: "::1",
       open: isDevelopment, // Auto-open browser in development
       cors: true,
+      // Security: Additional server hardening
+      headers: {
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'SAMEORIGIN',
+        'X-XSS-Protection': '1; mode=block',
+      },
     },
     
     plugins: [
@@ -70,8 +74,14 @@ export default defineConfig(({ command, mode }) => {
     
     // Preview server configuration (for production builds)
     preview: {
-      port: serverPort + 1,
-      host: serverHost,
+      port: 8081,
+      host: "::1",
+      // Security: Preview server headers
+      headers: {
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'SAMEORIGIN',
+        'X-XSS-Protection': '1; mode=block',
+      },
     },
     
     // Environment variables configuration
