@@ -1,6 +1,7 @@
 """
-FastAPI Web Server for AI Genesis Engine
-Bridges the React frontend with the Python Genesis Engine backend.
+FastAPI Web Server for AI Genesis Engine v2.1
+Bridges the React frontend with the Multi-Agent Python Genesis Engine backend.
+Supports autonomous self-correcting JavaScript/HTML5 game generation.
 """
 import asyncio
 import json
@@ -13,7 +14,7 @@ from typing import Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
 from .main import GenesisEngine
@@ -25,9 +26,9 @@ logger = logging.getLogger(__name__)
 
 # FastAPI app initialization
 app = FastAPI(
-    title="AI Genesis Engine API",
-    description="Transform single-sentence prompts into complete, playable 2D games",
-    version="1.0.0"
+    title="AI Genesis Engine v2.1 API",
+    description="Transform single-sentence prompts into complete, playable JavaScript/HTML5 games using autonomous multi-agent AI",
+    version="2.1.0"
 )
 
 # CORS middleware for frontend communication
@@ -52,370 +53,315 @@ class GameGenerationRequest(BaseModel):
     output_dir: Optional[str] = None
 
 class GameGenerationResponse(BaseModel):
-    session_id: str
-    status: str
-    message: str
+    success: bool
+    project_name: Optional[str] = None
+    project_path: Optional[str] = None
+    session_id: Optional[str] = None
+    game_file: Optional[str] = None
+    debug_cycles: Optional[int] = None
+    multi_agent_demo: Optional[bool] = None
+    output_format: Optional[str] = None
+    error: Optional[str] = None
 
-class ProgressUpdate(BaseModel):
-    session_id: str
-    phase: str
-    step: str
-    progress: float
-    message: str
-    timestamp: str
+# Global storage for WebSocket connections and active generations
+active_connections: Dict[str, WebSocket] = {}
+active_generations: Dict[str, Dict] = {}
 
-# Global session management
-active_sessions: Dict[str, Dict] = {}
-websocket_connections: Dict[str, WebSocket] = {}
-
-class WebSocketLogger(EngineLogger):
-    """Custom logger that sends updates via WebSocket"""
+class WebSocketLogger:
+    """Logger that sends real-time updates via WebSocket."""
     
-    def __init__(self, session_id: str):
-        super().__init__()
-        self.session_id = session_id
-    
-    def _send_progress(self, phase: str, step: str, progress: float, message: str):
-        """Send progress update via WebSocket"""
-        if self.session_id in websocket_connections:
-            update = ProgressUpdate(
-                session_id=self.session_id,
-                phase=phase,
-                step=step,
-                progress=progress,
-                message=message,
-                timestamp=datetime.now().isoformat()
-            )
-            
-            # Store update in session for later retrieval
-            if self.session_id in active_sessions:
-                if 'progress_updates' not in active_sessions[self.session_id]:
-                    active_sessions[self.session_id]['progress_updates'] = []
-                active_sessions[self.session_id]['progress_updates'].append(update.dict())
-            
-            # Send via WebSocket
-            try:
-                asyncio.create_task(
-                    websocket_connections[self.session_id].send_text(update.json())
-                )
-            except Exception as e:
-                logger.error(f"Failed to send WebSocket update: {e}")
-    
-    def send_file_creation(self, file_path: str, content: str):
-        """Send file creation update with content"""
-        if self.session_id in websocket_connections:
-            update = {
-                "session_id": self.session_id,
-                "type": "FILE_CREATED",
-                "phase": "CODING",
-                "step": "file_creation",
-                "progress": 0.0,
-                "message": f"Created {file_path}",
-                "timestamp": datetime.now().isoformat(),
-                "file_path": file_path,
-                "file_content": content[:5000] if len(content) > 5000 else content  # Limit size
-            }
-            
-            try:
-                asyncio.create_task(
-                    websocket_connections[self.session_id].send_text(json.dumps(update))
-                )
-            except Exception as e:
-                logger.error(f"Failed to send file creation update: {e}")
-    
-    def phase(self, phase_name: str, description: str):
-        """Override phase method to send WebSocket updates"""
-        super().phase(phase_name, description)
-        progress = 0.0
-        if phase_name == "DESIGN":
-            progress = 0.1
-        elif phase_name == "PLANNING":
-            progress = 0.3
-        elif phase_name == "CODING":
-            progress = 0.6
-        elif phase_name == "VERIFICATION":
-            progress = 0.9
+    def __init__(self, websocket: WebSocket, connection_id: str):
+        self.websocket = websocket
+        self.connection_id = connection_id
         
-        self._send_progress(phase_name, "starting", progress, description)
-    
-    def step(self, category: str, description: str):
-        """Override step method to send WebSocket updates"""
-        super().step(category, description)
-        self._send_progress(category, "processing", 0.0, description)
-    
-    def success(self, message: str):
-        """Override success method to send WebSocket updates"""
-        super().success(message)
-        self._send_progress("SUCCESS", "completed", 1.0, message)
-    
-    def error(self, message: str):
-        """Override error method to send WebSocket updates"""
-        super().error(message)
-        self._send_progress("ERROR", "failed", 0.0, message)
+    async def send_update(self, level: str, message: str, data: Optional[Dict] = None):
+        """Send a log update via WebSocket."""
+        try:
+            update = {
+                "type": "log",
+                "level": level,
+                "message": message,
+                "timestamp": datetime.now().isoformat(),
+                "data": data or {}
+            }
+            await self.websocket.send_text(json.dumps(update))
+        except Exception as e:
+            logger.warning(f"Failed to send WebSocket update: {str(e)}")
 
-@app.get("/")
-async def root():
-    """Health check endpoint"""
-    return {"message": "AI Genesis Engine API is running", "version": "1.0.0"}
+# API Endpoints
 
-@app.get("/health")
+@app.get("/api/health")
 async def health_check():
-    """Detailed health check"""
+    """Health check endpoint."""
     return {
         "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
-        "active_sessions": len(active_sessions),
-        "websocket_connections": len(websocket_connections)
+        "version": "2.1.0",
+        "features": {
+            "multi_agent_system": True,
+            "javascript_output": True,
+            "autonomous_debugging": True,
+            "real_time_updates": True
+        },
+        "ai_available": True,
+        "model": "claude-4-opus",
+        "timestamp": datetime.now().isoformat()
     }
 
-@app.post("/generate", response_model=GameGenerationResponse)
-async def start_game_generation(request: GameGenerationRequest):
-    """Start a new game generation session"""
+@app.post("/api/generate", response_model=GameGenerationResponse)
+async def generate_game(request: GameGenerationRequest):
+    """
+    Generate a JavaScript/HTML5 game using the multi-agent system.
+    This is a synchronous endpoint - for real-time updates, use WebSocket.
+    """
     try:
-        # Create new session
-        session_id = str(uuid.uuid4())
+        logger.info(f"Received generation request: {request.prompt}")
         
-        # Validate prompt
-        if not request.prompt or not request.prompt.strip():
-            raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+        # Initialize Genesis Engine
+        engine = GenesisEngine()
         
-        # Initialize session
-        active_sessions[session_id] = {
-            "prompt": request.prompt,
-            "status": "started",
-            "created_at": datetime.now().isoformat(),
-            "progress_updates": [],
-            "output_dir": request.output_dir
-        }
-        
-        logger.info(f"Started generation session {session_id} with prompt: {request.prompt}")
+        # Run generation (this will be synchronous for this endpoint)
+        result = await engine.run_with_websocket(
+            prompt=request.prompt,
+            output_dir=request.output_dir
+        )
         
         return GameGenerationResponse(
-            session_id=session_id,
-            status="started",
-            message=f"Game generation started for prompt: {request.prompt}"
+            success=result.get("success", False),
+            project_name=result.get("project_name"),
+            project_path=result.get("project_path"),
+            session_id=result.get("session_id"),
+            game_file=result.get("game_file"),
+            debug_cycles=result.get("debug_cycles", 0),
+            multi_agent_demo=result.get("multi_agent_demo", True),
+            output_format=result.get("output_format", "javascript_html5"),
+            error=result.get("error")
         )
         
     except Exception as e:
-        logger.error(f"Failed to start generation: {e}")
+        logger.error(f"Generation failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.websocket("/ws/{session_id}")
-async def websocket_endpoint(websocket: WebSocket, session_id: str):
-    """WebSocket endpoint for real-time progress updates"""
+@app.websocket("/ws/generate")
+async def websocket_generate(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time game generation with multi-agent progress updates.
+    """
     await websocket.accept()
-    websocket_connections[session_id] = websocket
+    connection_id = str(uuid.uuid4())[:8]
+    active_connections[connection_id] = websocket
     
     try:
-        # Check if session exists
-        if session_id not in active_sessions:
+        logger.info(f"WebSocket connection established: {connection_id}")
+        
+        # Wait for generation request
+        data = await websocket.receive_text()
+        request_data = json.loads(data)
+        prompt = request_data.get("prompt", "").strip()
+        
+        if not prompt:
             await websocket.send_text(json.dumps({
-                "error": "Session not found",
-                "session_id": session_id
+                "type": "error",
+                "message": "Empty prompt provided"
             }))
             return
         
-        session = active_sessions[session_id]
+        # Create WebSocket logger
+        ws_logger = WebSocketLogger(websocket, connection_id)
         
-        # Send any existing progress updates
-        for update in session.get('progress_updates', []):
-            await websocket.send_text(json.dumps(update))
+        # Send initial update
+        await ws_logger.send_update("info", f"🚀 Starting multi-agent generation for: '{prompt}'")
+        await ws_logger.send_update("info", "🤖 Initializing Architect, Engineer, Sentry, and Debugger agents...")
         
-        # Start generation if not already started
-        if session['status'] == 'started':
-            session['status'] = 'generating'
-            
-            # Run generation in background
-            asyncio.create_task(run_generation(session_id, session['prompt'], session.get('output_dir')))
-        
-        # Keep connection alive
-        while True:
-            try:
-                # Wait for any message from client (ping/pong)
-                await websocket.receive_text()
-            except WebSocketDisconnect:
-                break
-                
-    except WebSocketDisconnect:
-        logger.info(f"WebSocket disconnected for session {session_id}")
-    except Exception as e:
-        logger.error(f"WebSocket error for session {session_id}: {e}")
-        await websocket.send_text(json.dumps({
-            "error": str(e),
-            "session_id": session_id
-        }))
-    finally:
-        # Clean up connection
-        if session_id in websocket_connections:
-            del websocket_connections[session_id]
-
-async def run_generation(session_id: str, prompt: str, output_dir: Optional[str] = None):
-    """Run the actual game generation process"""
-    try:
-        # Create custom logger for this session
-        ws_logger = WebSocketLogger(session_id)
-        
-        # Initialize Genesis Engine with custom logger
+        # Initialize Genesis Engine
         engine = GenesisEngine()
-        engine.logger = ws_logger
         
-        # Update session status
-        active_sessions[session_id]['status'] = 'generating'
+        # Set up the logger to send WebSocket updates
+        engine.logger.add_websocket_logger = lambda logger_obj: setattr(logger_obj, 'ws_logger', ws_logger)
         
-        # Run generation
-        success = engine.run(prompt, output_dir)
+        # Run generation with WebSocket logging
+        result = await engine.run_with_websocket(
+            prompt=prompt,
+            output_dir=request_data.get("output_dir"),
+            websocket_logger=ws_logger
+        )
         
-        # Update final status
-        if success:
-            active_sessions[session_id]['status'] = 'completed'
-            active_sessions[session_id]['completed_at'] = datetime.now().isoformat()
-            
-            # Send completion update
-            ws_logger._send_progress("COMPLETED", "finished", 1.0, "Game generation completed successfully!")
-        else:
-            active_sessions[session_id]['status'] = 'failed'
-            active_sessions[session_id]['failed_at'] = datetime.now().isoformat()
-            
-            # Send failure update
-            ws_logger._send_progress("FAILED", "error", 0.0, "Game generation failed")
-            
+        # Send final result
+        await websocket.send_text(json.dumps({
+            "type": "result",
+            "success": result.get("success", False),
+            "project_name": result.get("project_name"),
+            "project_path": result.get("project_path"),
+            "session_id": result.get("session_id"),
+            "game_file": result.get("game_file"),
+            "debug_cycles": result.get("debug_cycles", 0),
+            "multi_agent_demo": result.get("multi_agent_demo", True),
+            "output_format": result.get("output_format", "javascript_html5"),
+            "error": result.get("error")
+        }))
+        
+        # Store generation info
+        active_generations[connection_id] = result
+        
+    except WebSocketDisconnect:
+        logger.info(f"WebSocket disconnected: {connection_id}")
     except Exception as e:
-        logger.error(f"Generation failed for session {session_id}: {e}")
-        active_sessions[session_id]['status'] = 'failed'
-        active_sessions[session_id]['error'] = str(e)
-        
-        # Send error update
-        if session_id in websocket_connections:
-            try:
-                await websocket_connections[session_id].send_text(json.dumps({
-                    "error": str(e),
-                    "session_id": session_id,
-                    "phase": "ERROR",
-                    "progress": 0.0
-                }))
-            except:
-                pass
-
-@app.get("/sessions/{session_id}")
-async def get_session_status(session_id: str):
-    """Get the current status of a generation session"""
-    if session_id not in active_sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    return active_sessions[session_id]
-
-@app.get("/sessions")
-async def list_sessions():
-    """List all active sessions"""
-    return {
-        "sessions": list(active_sessions.keys()),
-        "total": len(active_sessions)
-    }
-
-@app.delete("/sessions/{session_id}")
-async def cleanup_session(session_id: str):
-    """Clean up a completed session"""
-    if session_id in active_sessions:
-        del active_sessions[session_id]
-    
-    if session_id in websocket_connections:
+        logger.error(f"WebSocket error: {str(e)}")
         try:
-            await websocket_connections[session_id].close()
+            await websocket.send_text(json.dumps({
+                "type": "error",
+                "message": str(e)
+            }))
         except:
             pass
-        del websocket_connections[session_id]
-    
-    return {"message": f"Session {session_id} cleaned up"}
+    finally:
+        if connection_id in active_connections:
+            del active_connections[connection_id]
+        if connection_id in active_generations:
+            del active_generations[connection_id]
 
-@app.get("/games")
-async def list_generated_games():
-    """List all generated games"""
-    games_dir = Path("generated_games")
-    if not games_dir.exists():
-        return {"games": []}
-    
-    games = []
-    for game_dir in games_dir.iterdir():
-        if game_dir.is_dir():
-            main_py = game_dir / "main.py"
-            gdd_md = game_dir / "GDD.md"
-            
-            if main_py.exists():
-                games.append({
+@app.get("/api/games")
+async def list_games():
+    """List all generated games."""
+    try:
+        games_dir = Path("generated_games")
+        if not games_dir.exists():
+            return {"games": []}
+        
+        games = []
+        for game_dir in games_dir.iterdir():
+            if game_dir.is_dir():
+                game_html = game_dir / "game.html"  # Changed from main.py
+                readme_file = game_dir / "README.md"
+                
+                game_info = {
                     "name": game_dir.name,
                     "path": str(game_dir),
-                    "has_main": True,
-                    "has_gdd": gdd_md.exists(),
-                    "created": datetime.fromtimestamp(game_dir.stat().st_ctime).isoformat()
-                })
-    
-    return {"games": games}
+                    "has_game_file": game_html.exists(),
+                    "has_readme": readme_file.exists(),
+                    "created": datetime.fromtimestamp(game_dir.stat().st_ctime).isoformat(),
+                    "type": "javascript_html5"  # New output format
+                }
+                
+                # Try to extract prompt from README
+                if readme_file.exists():
+                    try:
+                        readme_content = readme_file.read_text(encoding='utf-8')
+                        # Extract prompt from README
+                        for line in readme_content.split('\n'):
+                            if '**Prompt**:' in line:
+                                game_info["prompt"] = line.split('**Prompt**:')[1].strip()
+                                break
+                    except:
+                        pass
+                
+                games.append(game_info)
+        
+        # Sort by creation date, newest first
+        games.sort(key=lambda x: x["created"], reverse=True)
+        
+        return {"games": games[:20]}  # Limit to 20 most recent
+    except Exception as e:
+        logger.error(f"Failed to list games: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/games/{game_name}/download")
+@app.get("/api/games/{game_name}/download")
 async def download_game(game_name: str):
-    """Download a generated game"""
-    game_path = Path("generated_games") / game_name / "main.py"
-    
-    if not game_path.exists():
-        raise HTTPException(status_code=404, detail="Game not found")
-    
-    return FileResponse(
-        path=str(game_path),
-        filename=f"{game_name}_main.py",
-        media_type="text/plain"
-    )
+    """Download a generated game as HTML file."""
+    try:
+        game_dir = Path("generated_games") / game_name
+        game_file = game_dir / "game.html"  # Changed from main.py
+        
+        if not game_file.exists():
+            raise HTTPException(status_code=404, detail="Game file not found")
+        
+        return FileResponse(
+            path=str(game_file),
+            filename=f"{game_name}.html",
+            media_type="text/html"
+        )
+    except Exception as e:
+        logger.error(f"Download failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/games/{game_name}/files")
-async def get_game_files(game_name: str):
-    """Get all files for a generated game"""
-    game_dir = Path("generated_games") / game_name
-    
-    if not game_dir.exists():
-        raise HTTPException(status_code=404, detail="Game not found")
-    
-    files = []
-    for file_path in game_dir.rglob("*"):
-        if file_path.is_file() and file_path.suffix in ['.py', '.md', '.txt']:
-            try:
-                content = file_path.read_text(encoding='utf-8')
+@app.get("/api/games/{game_name}/play")
+async def get_game_content(game_name: str):
+    """Get the HTML content of a game for in-browser playing."""
+    try:
+        game_dir = Path("generated_games") / game_name
+        game_file = game_dir / "game.html"
+        
+        if not game_file.exists():
+            raise HTTPException(status_code=404, detail="Game file not found")
+        
+        # Read the HTML content
+        html_content = game_file.read_text(encoding='utf-8')
+        
+        return PlainTextResponse(content=html_content, media_type="text/html")
+        
+    except Exception as e:
+        logger.error(f"Failed to get game content: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/games/{game_name}/files")
+async def list_game_files(game_name: str):
+    """List all files in a generated game directory."""
+    try:
+        game_dir = Path("generated_games") / game_name
+        if not game_dir.exists():
+            raise HTTPException(status_code=404, detail="Game directory not found")
+        
+        files = []
+        for file_path in game_dir.iterdir():
+            if file_path.is_file():
                 files.append({
                     "name": file_path.name,
-                    "path": str(file_path.relative_to(game_dir)),
-                    "content": content,
-                    "type": "python" if file_path.suffix == '.py' else 
-                           "markdown" if file_path.suffix == '.md' else "text"
+                    "size": file_path.stat().st_size,
+                    "modified": datetime.fromtimestamp(file_path.stat().st_mtime).isoformat()
                 })
-            except Exception as e:
-                logger.warning(f"Could not read file {file_path}: {e}")
-    
-    return {"files": files}
-
-@app.get("/games/{game_name}/play-instructions")
-async def get_play_instructions(game_name: str):
-    """Get instructions for playing the generated game"""
-    game_dir = Path("generated_games") / game_name
-    
-    if not game_dir.exists():
-        raise HTTPException(status_code=404, detail="Game not found")
         
-    main_py = game_dir / "main.py"
-    readme_md = game_dir / "README.md"
-    
-    instructions = {
-        "game_name": game_name,
-        "has_main": main_py.exists(),
-        "play_command": f"cd generated_games/{game_name} && python main.py",
-        "requirements": ["Python 3.7+", "pygame library"],
-        "install_command": "pip install pygame"
+        return {"files": files}
+    except Exception as e:
+        logger.error(f"Failed to list game files: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/games/{game_name}/files/{file_name}")
+async def get_game_file(game_name: str, file_name: str):
+    """Get the contents of a specific game file."""
+    try:
+        game_dir = Path("generated_games") / game_name
+        file_path = game_dir / file_name
+        
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        # Determine content type
+        if file_name.endswith('.html'):
+            media_type = "text/html"
+        elif file_name.endswith('.md'):
+            media_type = "text/markdown"
+        elif file_name.endswith('.js'):
+            media_type = "application/javascript"
+        else:
+            media_type = "text/plain"
+        
+        content = file_path.read_text(encoding='utf-8')
+        return PlainTextResponse(content=content, media_type=media_type)
+        
+    except Exception as e:
+        logger.error(f"Failed to get file: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/status")
+async def get_server_status():
+    """Get current server status and active connections."""
+    return {
+        "active_connections": len(active_connections),
+        "active_generations": len(active_generations),
+        "server_version": "2.1.0",
+        "multi_agent_system": True,
+        "output_format": "javascript_html5",
+        "autonomous_debugging": True
     }
-    
-    if readme_md.exists():
-        try:
-            instructions["readme"] = readme_md.read_text(encoding='utf-8')
-        except:
-            pass
-            
-    return instructions
 
 if __name__ == "__main__":
     import uvicorn

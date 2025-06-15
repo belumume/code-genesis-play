@@ -495,6 +495,334 @@ IMPORTANT: Your response must be pure Python code that can be executed directly.
         
         return cleaned_response
     
+    def generate_javascript_game(self, gdd_content: str, tech_plan: str) -> str:
+        """Generate complete JavaScript/HTML5 game using p5.js."""
+        messages = [{
+            'role': 'user',
+            'content': f"""Generate a complete HTML file with embedded JavaScript game using p5.js based on these documents:
+
+GAME DESIGN DOCUMENT:
+{gdd_content}
+
+TECHNICAL PLAN:
+{tech_plan}
+
+CRITICAL REQUIREMENTS:
+- Generate a COMPLETE HTML file with embedded JavaScript
+- Use p5.js library loaded from CDN
+- Include proper HTML structure with <!DOCTYPE html>
+- Embed ALL JavaScript code within <script> tags
+- Use simple geometric shapes for graphics (rectangles, circles, lines)
+- Include player controls (arrow keys or WASD)
+- Implement win/loss conditions
+- Use p5.js functions: setup(), draw(), createCanvas()
+- Well-commented code
+- Complete, fully playable game in browser
+
+IMPORTANT: Your response must be a complete HTML file that can be saved and opened in a browser. Start with <!DOCTYPE html> and end with </html>."""
+        }]
+        
+        response = self._run_async(self._make_api_call(messages))
+        
+        # Clean the response for HTML/JavaScript
+        cleaned_response = self._clean_html_response(response)
+        
+        # Validate HTML structure
+        if not self._validate_html_structure(cleaned_response):
+            print("⚠️  Generated HTML failed validation, using fallback")
+            cleaned_response = self._get_fallback_html_game()
+        
+        return cleaned_response
+    
+    def _clean_html_response(self, response: str) -> str:
+        """Clean the AI response to ensure it's valid HTML/JavaScript."""
+        print(f"🧹 Cleaning HTML response (length: {len(response)})")
+        
+        # Remove markdown code blocks
+        response = re.sub(r'```[a-zA-Z]*\n?', '', response)
+        response = re.sub(r'```\n?', '', response)
+        
+        # Find the start of HTML
+        if '<!DOCTYPE html>' in response:
+            start_index = response.find('<!DOCTYPE html>')
+            response = response[start_index:]
+        elif '<html>' in response:
+            start_index = response.find('<html>')
+            response = response[start_index:]
+        elif '<HTML>' in response:
+            start_index = response.find('<HTML>')
+            response = response[start_index:]
+        
+        # Find the end of HTML
+        if '</html>' in response:
+            end_index = response.rfind('</html>') + 7
+            response = response[:end_index]
+        elif '</HTML>' in response:
+            end_index = response.rfind('</HTML>') + 7
+            response = response[:end_index]
+        
+        return response.strip()
+    
+    def _validate_html_structure(self, html_content: str) -> bool:
+        """Validate basic HTML structure."""
+        if not html_content:
+            return False
+        
+        required_elements = [
+            '<!DOCTYPE html>' or '<html>',
+            '</html>',
+            '<script>',
+            '</script>',
+            'function setup(',
+            'function draw(',
+            'createCanvas('
+        ]
+        
+        content_lower = html_content.lower()
+        
+        for element in required_elements:
+            if element.lower() not in content_lower:
+                print(f"Missing required element: {element}")
+                return False
+        
+        return True
+    
+    def _get_fallback_html_game(self) -> str:
+        """Return a minimal working HTML/JavaScript game as fallback."""
+        return '''<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Space Shooter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #222;
+            font-family: Arial, sans-serif;
+        }
+        main {
+            text-align: center;
+        }
+        h1 {
+            color: white;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Simple Space Shooter</h1>
+        <div id="game-container"></div>
+        <p style="color: white; font-size: 14px; margin-top: 10px;">
+            Use ARROW KEYS to move • SPACEBAR to shoot
+        </p>
+    </main>
+
+    <script>
+        let player;
+        let bullets = [];
+        let enemies = [];
+        let score = 0;
+        let gameOver = false;
+
+        function setup() {
+            let canvas = createCanvas(800, 600);
+            canvas.parent('game-container');
+            
+            // Initialize player
+            player = {
+                x: width / 2,
+                y: height - 50,
+                size: 30,
+                speed: 5
+            };
+            
+            // Spawn initial enemies
+            for (let i = 0; i < 5; i++) {
+                spawnEnemy();
+            }
+        }
+
+        function draw() {
+            background(0, 0, 50);
+            
+            if (gameOver) {
+                drawGameOver();
+                return;
+            }
+            
+            // Update and draw player
+            updatePlayer();
+            drawPlayer();
+            
+            // Update and draw bullets
+            updateBullets();
+            drawBullets();
+            
+            // Update and draw enemies
+            updateEnemies();
+            drawEnemies();
+            
+            // Check collisions
+            checkCollisions();
+            
+            // Draw UI
+            drawUI();
+            
+            // Spawn new enemies
+            if (frameCount % 120 === 0) {
+                spawnEnemy();
+            }
+        }
+
+        function updatePlayer() {
+            if (keyIsDown(LEFT_ARROW) && player.x > player.size/2) {
+                player.x -= player.speed;
+            }
+            if (keyIsDown(RIGHT_ARROW) && player.x < width - player.size/2) {
+                player.x += player.speed;
+            }
+            if (keyIsDown(UP_ARROW) && player.y > player.size/2) {
+                player.y -= player.speed;
+            }
+            if (keyIsDown(DOWN_ARROW) && player.y < height - player.size/2) {
+                player.y += player.speed;
+            }
+        }
+
+        function drawPlayer() {
+            fill(100, 200, 255);
+            stroke(255);
+            strokeWeight(2);
+            triangle(player.x, player.y - player.size/2, 
+                    player.x - player.size/2, player.y + player.size/2,
+                    player.x + player.size/2, player.y + player.size/2);
+        }
+
+        function updateBullets() {
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].y -= bullets[i].speed;
+                if (bullets[i].y < 0) {
+                    bullets.splice(i, 1);
+                }
+            }
+        }
+
+        function drawBullets() {
+            fill(255, 255, 0);
+            noStroke();
+            for (let bullet of bullets) {
+                ellipse(bullet.x, bullet.y, bullet.size);
+            }
+        }
+
+        function updateEnemies() {
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                enemies[i].y += enemies[i].speed;
+                if (enemies[i].y > height + 50) {
+                    enemies.splice(i, 1);
+                }
+            }
+        }
+
+        function drawEnemies() {
+            fill(255, 100, 100);
+            stroke(255);
+            strokeWeight(1);
+            for (let enemy of enemies) {
+                rect(enemy.x - enemy.size/2, enemy.y - enemy.size/2, enemy.size, enemy.size);
+            }
+        }
+
+        function spawnEnemy() {
+            enemies.push({
+                x: random(50, width - 50),
+                y: -30,
+                size: 25,
+                speed: random(1, 3)
+            });
+        }
+
+        function checkCollisions() {
+            // Bullet-enemy collisions
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    let bullet = bullets[i];
+                    let enemy = enemies[j];
+                    let distance = dist(bullet.x, bullet.y, enemy.x, enemy.y);
+                    
+                    if (distance < bullet.size/2 + enemy.size/2) {
+                        bullets.splice(i, 1);
+                        enemies.splice(j, 1);
+                        score += 10;
+                        break;
+                    }
+                }
+            }
+            
+            // Player-enemy collisions
+            for (let enemy of enemies) {
+                let distance = dist(player.x, player.y, enemy.x, enemy.y);
+                if (distance < player.size/2 + enemy.size/2) {
+                    gameOver = true;
+                }
+            }
+        }
+
+        function drawUI() {
+            fill(255);
+            textAlign(LEFT);
+            textSize(20);
+            text("Score: " + score, 20, 30);
+        }
+
+        function drawGameOver() {
+            fill(255, 0, 0, 150);
+            rect(0, 0, width, height);
+            
+            fill(255);
+            textAlign(CENTER);
+            textSize(48);
+            text("GAME OVER", width/2, height/2 - 50);
+            textSize(24);
+            text("Final Score: " + score, width/2, height/2);
+            text("Press R to restart", width/2, height/2 + 40);
+        }
+
+        function keyPressed() {
+            if (key === ' ' && !gameOver) {
+                bullets.push({
+                    x: player.x,
+                    y: player.y - player.size/2,
+                    size: 8,
+                    speed: 7
+                });
+            }
+            
+            if (key === 'r' || key === 'R') {
+                if (gameOver) {
+                    // Restart game
+                    gameOver = false;
+                    score = 0;
+                    bullets = [];
+                    enemies = [];
+                    player.x = width / 2;
+                    player.y = height - 50;
+                    for (let i = 0; i < 5; i++) {
+                        spawnEnemy();
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>'''
+    
     def _get_mock_response(self, prompt: str) -> str:
         """Fallback mock responses for testing."""
         if "design document" in prompt.lower() or "gdd" in prompt.lower():

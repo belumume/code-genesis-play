@@ -6,11 +6,10 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Play, Download, AlertCircle, CheckCircle, FileText, Code, Eye } from 'lucide-react';
+import { Loader2, Play, Download, AlertCircle, CheckCircle, FileText, Code, Eye, Bot, TestTube, Wrench, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
 import { useApiConfig } from '@/hooks/useApiConfig';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 
 interface ProgressUpdate {
   session_id: string;
