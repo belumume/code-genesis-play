@@ -37,6 +37,10 @@ interface GeneratedFile {
   type: 'python' | 'markdown' | 'other';
 }
 
+// Production Configuration:
+// In Lovable, set these environment variables:
+// VITE_API_BASE_URL = https://your-app.onrender.com
+// VITE_WS_BASE_URL = wss://your-app.onrender.com
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000';
 
