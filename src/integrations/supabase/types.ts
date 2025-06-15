@@ -9,7 +9,83 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      game_sessions: {
+        Row: {
+          created_at: string
+          error: string | null
+          game_path: string | null
+          id: string
+          prompt: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          game_path?: string | null
+          id?: string
+          prompt: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          game_path?: string | null
+          id?: string
+          prompt?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      progress_updates: {
+        Row: {
+          file_content: string | null
+          file_created: string | null
+          id: string
+          message: string
+          phase: string
+          progress: number
+          session_id: string
+          step: string
+          timestamp: string
+        }
+        Insert: {
+          file_content?: string | null
+          file_created?: string | null
+          id?: string
+          message: string
+          phase: string
+          progress?: number
+          session_id: string
+          step: string
+          timestamp?: string
+        }
+        Update: {
+          file_content?: string | null
+          file_created?: string | null
+          id?: string
+          message?: string
+          phase?: string
+          progress?: number
+          session_id?: string
+          step?: string
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progress_updates_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "game_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

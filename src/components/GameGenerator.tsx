@@ -180,9 +180,9 @@ export function GameGenerator() {
     }
 
     try {
-      // Create session in database first
+      // Create session in database first using proper type casting
       const { data: sessionData, error: sessionError } = await supabase
-        .from('game_sessions')
+        .from('game_sessions' as any)
         .insert({
           user_id: user.id,
           prompt: prompt.trim(),
@@ -192,6 +192,10 @@ export function GameGenerator() {
         .single();
 
       if (sessionError) throw sessionError;
+      
+      if (!sessionData) {
+        throw new Error('Failed to create session');
+      }
 
       console.log('Starting generation with API URL:', apiBaseUrl);
       const response = await fetch(`${apiBaseUrl}/generate`, {
