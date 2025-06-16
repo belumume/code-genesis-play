@@ -12,21 +12,12 @@ from pydantic import Field, ConfigDict
 from dotenv import load_dotenv
 load_dotenv()
 
-class GenesisConfig(BaseSettings):
-    """Configuration for the AI Genesis Engine, loaded from environment variables."""
-    anthropic_api_key: str = Field(..., env="ANTHROPIC_API_KEY")
-    anthropic_model: str = Field("claude-sonnet-4-20250514", env="ANTHROPIC_MODEL")
-    
-    # Game generation settings
-    max_iterations: int = Field(10, env="MAX_ITERATIONS")
-    max_debug_cycles: int = Field(5, env="MAX_DEBUG_CYCLES")
-
 class Settings(BaseSettings):
     """Application settings with environment variable support."""
     
     # API Configuration
     anthropic_api_key: Optional[str] = Field(None, env="ANTHROPIC_API_KEY")
-    anthropic_model: str = Field("claude-sonnet-4-20250514", env="ANTHROPIC_MODEL")
+    anthropic_model: str = Field("claude-opus-4-20250514", env="ANTHROPIC_MODEL")
     api_timeout: int = Field(60, env="API_TIMEOUT")
     max_retries: int = Field(3, env="MAX_RETRIES")
     
