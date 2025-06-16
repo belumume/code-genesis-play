@@ -18,42 +18,32 @@ logger = logging.getLogger(__name__)
 class AIClient:
     """
     Client for interacting with Anthropic's Claude API.
-    Falls back through model hierarchy: Sonnet 4 → Sonnet 3.7 → Haiku 3.5 → Mock responses.
-    Enhanced with code validation to prevent syntax errors.
+    Uses the specified high-performance model for all tasks.
     """
     
     def __init__(self):
-        # Try multiple sources for the API key
         self.api_key = self._get_api_key()
         self.base_url = "https://api.anthropic.com/v1/messages"
         
-        # Updated model fallback hierarchy for better availability
-        self.model_hierarchy = [
-            "claude-sonnet-4-20250514",     # Primary: Claude 4 Sonnet (high performance, good availability)
-            "claude-3-7-sonnet-20250219",   # Fallback 1: Claude 3.7 Sonnet (extended thinking, reliable)
-            "claude-3-5-haiku-20241022"     # Fallback 2: Claude 3.5 Haiku (fast, highly available)
-        ]
-        self.current_model_index = 0
+        # Use the single, specified top-tier model
+        self.model = "claude-sonnet-4-20250514"
         
-        # Try to use models from config, fallback to defaults
+        # Try to use model from config, otherwise use the default
         try:
             from ..config import settings
             if hasattr(settings, 'anthropic_model'):
-                # If config specifies a model, put it first in hierarchy
-                if settings.anthropic_model not in self.model_hierarchy:
-                    self.model_hierarchy.insert(0, settings.anthropic_model)
+                self.model = settings.anthropic_model
         except ImportError:
             pass
         
         self.use_mock = not bool(self.api_key)
-        self.timeout = aiohttp.ClientTimeout(total=120)  # Increased timeout for more complex generations
-        
+        self.timeout = aiohttp.ClientTimeout(total=120)
+
         if self.use_mock:
             print("⚠️  No Anthropic API key found. Using mock responses for testing.")
         else:
             print("✅ Anthropic API key found. Using real AI integration.")
-            print(f"🎯 Optimized model hierarchy: {' → '.join(self.model_hierarchy)} → Mock")
-            print("🚀 Prioritizing Sonnet 4 for best balance of capability and availability")
+            print(f"🎯 Using exclusive model: {self.model}")
     
     def _get_api_key(self) -> Optional[str]:
         """Get API key from multiple sources."""
@@ -290,35 +280,23 @@ sys.exit()
 '''
 
     @retry(
-        stop=stop_after_attempt(3),  # Increased retries for better reliability
+        stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=3, max=10),
         reraise=True
     )
-    async def _make_api_call_with_retry(self, messages: list, model: str) -> str:
-        """Make an API call with retry logic for a specific model."""
+    async def _make_api_call_with_retry(self, messages: list) -> str:
+        """Make an API call with retry logic for the configured model."""
         headers = {
             'Content-Type': 'application/json',
             'x-api-key': self.api_key,
             'anthropic-version': '2023-06-01'
         }
         
-        # Adjust parameters based on model capabilities
-        max_tokens = 8192  # Default for most models
-        temperature = 0.7
-        
-        if "sonnet-4" in model:
-            max_tokens = 64000  # Sonnet 4 supports much larger outputs
-        elif "3-7-sonnet" in model:
-            max_tokens = 64000  # Sonnet 3.7 also supports larger outputs
-        elif "haiku" in model:
-            max_tokens = 8192   # Haiku has standard output limits
-            temperature = 0.5   # Lower temperature for consistency on smaller model
-        
         payload = {
-            'model': model,
-            'max_tokens': max_tokens,
+            'model': self.model,
+            'max_tokens': 64000, # Max for Sonnet 4
             'messages': messages,
-            'temperature': temperature
+            'temperature': 0.7
         }
         
         async with aiohttp.ClientSession(timeout=self.timeout) as session:
@@ -327,46 +305,28 @@ sys.exit()
                     data = await response.json()
                     return data['content'][0]['text']
                 elif response.status == 429:
-                    # Rate limited - retry after delay
                     retry_after = response.headers.get('Retry-After', 10)
-                    logger.warning(f"Rate limited on {model}. Retrying after {retry_after} seconds")
+                    logger.warning(f"Rate limited on {self.model}. Retrying after {retry_after} seconds")
                     await asyncio.sleep(int(retry_after))
-                    raise Exception(f"Rate limited on {model}")
-                elif response.status == 400:
-                    # Bad request - might be model unavailable
-                    error_text = await response.text()
-                    logger.warning(f"Bad request for {model}: {error_text}")
-                    raise Exception(f"Model {model} unavailable or request invalid")
+                    raise Exception(f"Rate limited on {self.model}")
                 else:
                     error_text = await response.text()
-                    error_msg = f"API call failed for {model}: {response.status} - {error_text}"
+                    error_msg = f"API call failed for {self.model}: {response.status} - {error_text}"
                     logger.error(error_msg)
                     raise Exception(error_msg)
     
     async def _make_api_call(self, messages: list) -> str:
-        """Make an async API call with model fallback hierarchy."""
+        """Make an async API call to the configured model."""
         if self.use_mock:
             return self._get_mock_response(messages[0]['content'])
         
-        # Try each model in the hierarchy
-        for i, model in enumerate(self.model_hierarchy):
-            try:
-                print(f"🤖 Trying {model}...")
-                result = await self._make_api_call_with_retry(messages, model)
-                if i > 0:
-                    print(f"✅ Successfully used fallback model: {model}")
-                else:
-                    print(f"✅ Primary model {model} working perfectly")
-                return result
-            except Exception as e:
-                logger.warning(f"Model {model} failed: {e}")
-                print(f"⚠️  {model} unavailable ({str(e)[:100]}...), trying next model...")
-                continue
-        
-        # All models failed, fall back to mock
-        logger.error("All AI models failed, falling back to mock data")
-        print("❌ All AI models failed, falling back to mock data")
-        return self._get_mock_response(messages[0]['content'])
+        try:
+            print(f"🤖 Using exclusive model: {self.model}...")
+            return await self._make_api_call_with_retry(messages)
+        except Exception as e:
+            logger.error(f"Model {self.model} failed: {e}. Falling back to mock data.")
+            print(f"❌  Model {self.model} failed. Falling back to mock data.")
+            return self._get_mock_response(messages[0]['content'])
     
     def _run_async(self, coro):
         """Safely run async code, handling existing event loops."""
@@ -424,7 +384,6 @@ Format as Markdown. Focus on Python/Pygame implementation. Be specific but conci
     
     def generate_asset_specifications(self, gdd_content: str) -> str:
         """Generate detailed asset specifications."""
-        # Asset generation is simpler - can start with faster model
         messages = [{
             'role': 'user',
             'content': f"""Based on this Game Design Document, create detailed asset specifications:
@@ -439,19 +398,6 @@ Create asset specifications that include:
 
 Format as Markdown. Be specific about colors, sizes, and styles. Keep it concise."""
         }]
-        
-        # For simpler tasks like asset specs, we can start with Haiku for speed
-        if not self.use_mock:
-            # Temporarily prioritize Haiku for this simpler task
-            original_hierarchy = self.model_hierarchy.copy()
-            if "claude-3-5-haiku-20241022" in self.model_hierarchy:
-                self.model_hierarchy = ["claude-3-5-haiku-20241022"] + [m for m in original_hierarchy if m != "claude-3-5-haiku-20241022"]
-            
-            result = self._run_async(self._make_api_call(messages))
-            
-            # Restore original hierarchy
-            self.model_hierarchy = original_hierarchy
-            return result
         
         return self._run_async(self._make_api_call(messages))
     

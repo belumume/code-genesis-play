@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     
     # API Configuration
     anthropic_api_key: Optional[str] = Field(None, env="ANTHROPIC_API_KEY")
-    anthropic_model: str = Field("claude-opus-4-20250514", env="ANTHROPIC_MODEL")
+    anthropic_model: str = Field("claude-sonnet-4-20250514", env="ANTHROPIC_MODEL")
     api_timeout: int = Field(60, env="API_TIMEOUT")
     max_retries: int = Field(3, env="MAX_RETRIES")
     
