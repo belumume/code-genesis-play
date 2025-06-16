@@ -3,7 +3,7 @@ services:
     name: ai-genesis-engine
     runtime: python
     buildCommand: chmod +x deploy_render.sh && ./deploy_render.sh
-    startCommand: python -m src.genesis_engine.run_server_prod
+    startCommand: python run_server_prod.py
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false  # Add this in Render dashboard
