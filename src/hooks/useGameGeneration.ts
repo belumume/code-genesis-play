@@ -44,35 +44,6 @@ export function useGameGeneration() {
 
       console.log('Creating game session for user:', user.id);
 
-      // First check if the table exists by trying a simple select
-      const { data: testData, error: testError } = await supabase
-        .from('game_sessions')
-        .select('id')
-        .limit(1);
-      
-      if (testError) {
-        console.error('Table access test failed:', testError);
-        addProgressLog({
-          type: 'error',
-          level: 'error',
-          message: `❌ Database access error: ${testError.message}. Please check if the database tables are properly set up.`,
-          timestamp: new Date().toISOString()
-        });
-        
-        // Fall back to direct API call without database session
-        addProgressLog({
-          type: 'log',
-          level: 'info',
-          message: '🔄 Proceeding without database session tracking...',
-          timestamp: new Date().toISOString()
-        });
-        
-        await generateGameDirectly(prompt);
-        return;
-      }
-
-      console.log('Table access test successful');
-
       const { data: session, error: sessionError } = await supabase
         .from('game_sessions')
         .insert({
@@ -92,7 +63,7 @@ export function useGameGeneration() {
           timestamp: new Date().toISOString()
         });
         
-        // Fall back to direct API call
+        // Fall back to direct API call without database session
         addProgressLog({
           type: 'log',
           level: 'info',
