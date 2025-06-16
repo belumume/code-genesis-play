@@ -176,6 +176,11 @@ class WebSocketLogger:
 
 # API Endpoints
 
+@app.get("/")
+async def root():
+    """Root endpoint for basic health checks."""
+    return {"message": "AI Genesis Engine API", "status": "healthy", "docs": "/docs"}
+
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint."""
