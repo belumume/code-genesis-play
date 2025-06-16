@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -5,18 +6,21 @@ import { X, Download, Play, ExternalLink } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { toast } from 'sonner';
+import type { GeneratedFile } from '@/types/game';
 
 interface FileViewerProps {
-  file: {
-    name: string;
-    content: string;
-    type: string;
-  };
+  file: GeneratedFile | null;
+  isOpen: boolean;
   onClose: () => void;
+  onDownload: (file: GeneratedFile) => void;
 }
 
-export function FileViewer({ file, onClose }: FileViewerProps) {
+export function FileViewer({ file, isOpen, onClose, onDownload }: FileViewerProps) {
   const [showGamePreview, setShowGamePreview] = useState(false);
+
+  if (!file || !isOpen) {
+    return null;
+  }
 
   const getLanguage = (fileName: string, fileType: string): string => {
     if (fileName.endsWith('.py')) return 'python';
@@ -30,16 +34,7 @@ export function FileViewer({ file, onClose }: FileViewerProps) {
   };
 
   const handleDownload = () => {
-    const blob = new Blob([file.content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success(`Downloaded ${file.name}`);
+    onDownload(file);
   };
 
   const handlePlayGame = () => {
@@ -65,7 +60,7 @@ export function FileViewer({ file, onClose }: FileViewerProps) {
 
   return (
     <>
-      <Dialog open={true} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle className="text-xl font-semibold">{file.name}</DialogTitle>
