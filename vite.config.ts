@@ -50,13 +50,21 @@ export default defineConfig(({ command, mode }) => {
     build: {
       target: 'es2020',
       rollupOptions: {
+        external: [
+          // Externalize react-syntax-highlighter to prevent resolution issues
+          'react-syntax-highlighter',
+          'react-syntax-highlighter/dist/esm/styles/prism'
+        ],
         output: {
           manualChunks: {
             vendor: ['react', 'react-dom'],
             ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
             supabase: ['@supabase/supabase-js'],
-            'syntax-highlighter': ['react-syntax-highlighter'],
           },
+          globals: {
+            'react-syntax-highlighter': 'SyntaxHighlighter',
+            'react-syntax-highlighter/dist/esm/styles/prism': 'PrismStyles'
+          }
         },
       },
       // Generate source maps in development but not in production (for security)
@@ -70,9 +78,11 @@ export default defineConfig(({ command, mode }) => {
         'react-dom',
         '@supabase/supabase-js',
         '@tanstack/react-query',
-        'react-syntax-highlighter',
-        'react-syntax-highlighter/dist/esm/styles/prism',
       ],
+      exclude: [
+        'react-syntax-highlighter',
+        'react-syntax-highlighter/dist/esm/styles/prism'
+      ]
     },
     
     // Preview server configuration (for production builds)
