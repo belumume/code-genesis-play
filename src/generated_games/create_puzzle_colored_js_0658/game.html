@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChromaDrop - Color Matching Puzzle Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #1a1a1a;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script>
+        // Game constants
+        const BOARD_WIDTH = 10;
+        const BOARD_HEIGHT = 20;
+        const BLOCK_SIZE = 30;
+        const GAME_WIDTH = BOARD_WIDTH * BLOCK_SIZE;
+        const GAME_HEIGHT = BOARD_HEIGHT * BLOCK_SIZE;
+        const PREVIEW_WIDTH = 150;
+        const TOTAL_WIDTH = GAME_WIDTH + PREVIEW_WIDTH + 50;
+        
+        // Block colors
+        const COLORS = {
+            RED: '#FF6B6B',
+            BLUE: '#4ECDC4',
+            GREEN: '#95E1D3',
+            YELLOW: '#FFE66D',
+            PURPLE: '#C77DFF',
+            ORANGE: '#FF9F1C',
+            EMPTY: null
+        };
+        
+        const COLOR_ARRAY = [COLORS.RED, COLORS.BLUE, COLORS.GREEN, COLORS.YELLOW, COLORS.PURPLE, COLORS.ORANGE];
+        
+        // Game variables
+        let board;
+        let currentPiece;
+        let nextPieces = [];
+        let score = 0;
+        let level = 1;
+        let lines = 0;
+        let gameOver = false;
+        let isPaused = false;
+        let dropTimer = 0;
+        let dropSpeed = 60; // Frames between automatic drops
+        let particles = [];
+        let combos = 0;
+        
+        // Block shapes (represented as 2D arrays)
+        const SHAPES = [
+            // Single block
+            [[1]],
+            // L-shape
+            [[1, 0],
+             [1, 0],
+             [1, 1]],
+            // T-shape
+            [[0, 1, 0],
+             [1, 1, 1]],
+            // Line (2 blocks)
+            [[1],
+             [1]],
+            // Line (3 blocks)
+            [[1],
+             [1],
+             [1]],
+            // Square
+            [[1, 1],
+             [1, 1]]
+        ];
+        
+        // Particle class for visual effects
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = random(-3, 3);
+                this.vy = random(-5, -1);
+                this.color = color;
+                this.life = 255;
+                this.size = random(3, 8);
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.2; // Gravity
+                this.life -= 8;
+            }
+            
+            draw() {
+                push();
+                noStroke();
+                fill(red(this.color), green(this.color), blue(this.color), this.life);
+                circle(this.x, this.y, this.size);
+                pop();
+            }
+            
+            isDead() {
+                return this.life <= 0;
+            }
+        }
+        
+        // Piece class for falling blocks
+        class Piece {
+            constructor(shape, color, x = Math.floor(BOARD_WIDTH / 2) - 1, y = 0) {
+                this.shape = shape;
+                this.color = color;
+                this.x = x;
+                this.y = y;
+            }
+            
+            rotate() {
+                // Rotate the shape 90 degrees clockwise
+                const newShape = [];
+                const rows = this.shape.length;
+                const cols = this.shape[0].length;
+                
+                for (let i = 0; i < cols; i++) {
+                    newShape[i] = [];
+                    for (let j = rows - 1; j >= 0; j--) {
+                        newShape[i].push(this.shape[j][i]);
+                    }
+                }
+                
+                // Check if rotation is valid
+                if (this.isValidPosition(this.x, this.y, newShape)) {
+                    this.shape = newShape;
+                }
+            }
+            
+            isValidPosition(newX, newY, shape = this.shape) {
+                for (let row = 0; row < shape.length; row++) {
+                    for (let col = 0; col < shape[row].length; col++) {
+                        if (shape[row][col]) {
+                            const boardX = newX + col;
+                            const boardY = newY + row;
+                            
+                            // Check boundaries
+                            if (boardX < 0 || boardX >= BOARD_WIDTH || boardY >= BOARD_HEIGHT) {
+                                return false;
+                            }
+                            
+                            // Check collision with placed blocks
+                            if (boardY >= 0 && board[boardY][boardX] !== COLORS.EMPTY) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+            
+            move(dx, dy) {
+                if (this.isValidPosition(this.x + dx, this.y + dy)) {
+                    this.x += dx;
+                    this.y += dy;
+                    return true;
+                }
+                return false;
+            }
+            
+            draw(offsetX = 0, offsetY = 0, blockSize = BLOCK_SIZE) {
+                push();
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            fill(this.color);
+                            stroke(0);
+                            strokeWeight(2);
+                            rect(
+                                offsetX + (this.x + col) * blockSize,
+                                offsetY + (this.y + row) * blockSize,
+                                blockSize,
+                                blockSize,
+                                4
+                            );
+                        }
+                    }
+                }
+                pop();
+            }
+        }
+        
+        function setup() {
+            let canvas = createCanvas(TOTAL_WIDTH, GAME_HEIGHT);
+            canvas.parent('game-container');
+            
+            // Initialize board
+            board = [];
+            for (let row = 0; row < BOARD_HEIGHT; row++) {
+                board[row] = [];
+                for (let col = 0; col < BOARD_WIDTH; col++) {
+                    board[row][col] = COLORS.EMPTY;
+                }
+            }
+            
+            // Generate initial pieces
+            currentPiece = generatePiece();
+            for (let i = 0; i < 3; i++) {
+                nextPieces.push(generatePiece());
+            }
+        }
+        
+        function draw() {
+            background(30);
+            
+            if (!gameOver && !isPaused) {
+                // Update drop timer
+                dropTimer++;
+                if (dropTimer >= dropSpeed) {
+                    dropTimer = 0;
+                    if (!currentPiece.move(0, 1)) {
+                        placePiece();
+                    }
+                }
+            }
+            
+            // Draw game board background
+            push();
+            fill(20);
+            stroke(60);
+            strokeWeight(2);
+            rect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            pop();
+            
+            // Draw grid lines
+            push();
+            stroke(40);
+            strokeWeight(1);
+            for (let i = 1; i < BOARD_WIDTH; i++) {
+                line(i * BLOCK_SIZE, 0, i * BLOCK_SIZE, GAME_HEIGHT);
+            }
+            for (let i = 1; i < BOARD_HEIGHT; i++) {
+                line(0, i * BLOCK_SIZE, GAME_WIDTH, i * BLOCK_SIZE);
+            }
+            pop();
+            
+            // Draw placed blocks
+            for (let row = 0; row < BOARD_HEIGHT; row++) {
+                for (let col = 0; col < BOARD_WIDTH; col++) {
+                    if (board[row][col] !== COLORS.EMPTY) {
+                        push();
+                        fill(board[row][col]);
+                        stroke(0);
+                        strokeWeight(2);
+                        rect(col * BLOCK_SIZE, row * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE, 4);
+                        pop();
+                    }
+                }
+            }
+            
+            // Draw current piece
+            if (currentPiece && !gameOver) {
+                currentPiece.draw();
+                
+                // Draw ghost piece (preview of where it will land)
+                push();
+                let ghostY = currentPiece.y;
+                while (currentPiece.isValidPosition(currentPiece.x, ghostY + 1)) {
+                    ghostY++;
+                }
+                for (let row = 0; row < currentPiece.shape.length; row++) {
+                    for (let col = 0; col < currentPiece.shape[row].length; col++) {
+                        if (currentPiece.shape[row][col]) {
+                            fill(red(currentPiece.color), green(currentPiece.color), blue(currentPiece.color), 50);
+                            noStroke();
+                            rect(
+                                (currentPiece.x + col) * BLOCK_SIZE,
+                                (ghostY + row) * BLOCK_SIZE,
+                                BLOCK_SIZE,
+                                BLOCK_SIZE,
+                                4
+                            );
+                        }
+                    }
+                }
+                pop();
+            }
+            
+            // Update and draw particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].isDead()) {
+                    particles.splice(i, 1);
+                }
+            }
+            
+            // Draw UI panel
+            drawUI();
+            
+            // Draw game over screen
+            if (gameOver) {
+                drawGameOver();
+            }
+            
+            // Draw pause screen
+            if (isPaused && !gameOver) {
+                drawPause();
+            }
+        }
+        
+        function drawUI() {
+            // UI Background
+            push();
+            fill(40);
+            stroke(80);
+            strokeWeight(2);
+            rect(GAME_WIDTH + 20, 0, PREVIEW_WIDTH, GAME_HEIGHT);
+            pop();
+            
+            // Score
+            push();
+            fill(255);
+            textAlign(LEFT);
+            textSize(20);
+            text("SCORE", GAME_WIDTH + 30, 30);
+            textSize(24);
+            text(score, GAME_WIDTH + 30, 60);
+            pop();
+            
+            // Level
+            push();
+            fill(255);
+            textAlign(LEFT);
+            textSize(20);
+            text("LEVEL", GAME_WIDTH + 30, 100);
+            textSize(24);
+            text(level, GAME_WIDTH + 30, 130);
+            pop();
+            
+            // Lines
+            push();
+            fill(255);
+            textAlign(LEFT);
+            textSize(20);
+            text("LINES", GAME_WIDTH + 30, 170);
+            textSize(24);
+            text(lines, GAME_WIDTH + 30, 200);
+            pop();
+            
+            // Next pieces
+            push();
+            fill(255);
+            textAlign(LEFT);
+            textSize(20);
+            text("NEXT", GAME_WIDTH + 30, 250);
+            pop();
+            
+            // Draw next pieces
+            let yOffset = 280;
+            for (let i = 0; i < nextPieces.length; i++) {
+                let piece = nextPieces[i];
+                push();
+                translate(GAME_WIDTH + 50, yOffset);
+                for (let row = 0; row < piece.shape.length; row++) {
+                    for (let col = 0; col < piece.shape[row].length; col++) {
+                        if (piece.shape[row][col]) {
+                            fill(piece.color);
+                            stroke(0);
+                            strokeWeight(1);
+                            rect(col * 20, row * 20, 20, 20, 2);
+                        }
+                    }
+                }
+                pop();
+                yOffset += 80;
+            }
+            
+            // Controls
+            push();
+            fill(200);
+            textAlign(LEFT);
+            textSize(12);
+            text("CONTROLS:", GAME_WIDTH + 30, GAME_HEIGHT - 120);
+            text("← → Move", GAME_WIDTH + 30, GAME_HEIGHT - 100);
+            text("↑ Rotate", GAME_WIDTH + 30, GAME_HEIGHT - 80);
+            text("↓ Soft Drop", GAME_WIDTH + 30, GAME_HEIGHT - 60);
+            text("SPACE Hard Drop", GAME_WIDTH + 30, GAME_HEIGHT - 40);
+            text("P Pause", GAME_WIDTH + 30, GAME_HEIGHT - 20);
+            pop();
+        }
+        
+        function drawGameOver() {
+            push();
+            fill(0, 0, 0, 200);
+            rect(0, 0, TOTAL_WIDTH, GAME_HEIGHT);
+            
+            fill(255);
+            textAlign(CENTER);
+            textSize(48);
+            text("GAME OVER", TOTAL_WIDTH / 2, GAME_HEIGHT / 2 - 50);
+            
+            textSize(24);
+            text("Final Score: " + score, TOTAL_WIDTH / 2, GAME_HEIGHT / 2 + 10);
+            
+            textSize(18);
+            text("Press ENTER to restart", TOTAL_WIDTH / 2, GAME_HEIGHT / 2 + 50);
+            pop();
+        }
+        
+        function drawPause() {
+            push();
+            fill(0, 0, 0, 150);
+            rect(0, 0, TOTAL_WIDTH, GAME_HEIGHT);
+            
+            fill(255);
+            textAlign(CENTER);
+            textSize(48);
+            text("PAUSED", TOTAL_WIDTH / 2, GAME_HEIGHT / 2);
+            
+            textSize(18);
+            text("Press P to resume", TOTAL_WIDTH / 2, GAME_HEIGHT / 2 + 40);
+            pop();
+        }
+        
+        function generatePiece() {
+            const shapeIndex = Math.floor(random(SHAPES.length));
+            const colorIndex = Math.floor(random(COLOR_ARRAY.length));
+            return new Piece(SHAPES[shapeIndex], COLOR_ARRAY[colorIndex]);
+        }
+        
+        function placePiece() {
+            // Place the current piece on the board
+            for (let row = 0; row < currentPiece.shape.length; row++) {
+                for (let col = 0; col < currentPiece.shape[row].length; col++) {
+                    if (currentPiece.shape[row][col]) {
+                        const boardY = currentPiece.y + row;
+                        const boardX = currentPiece.x + col;
+                        
+                        if (boardY >= 0) {
+                            board[boardY][boardX] = currentPiece.color;
+                        } else {
+                            // Game over if piece is placed above the board
+                            gameOver = true;
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            // Check for matches
+            checkMatches();
+            
+            // Get next piece
+            currentPiece = nextPieces.shift();
+            nextPieces.push(generatePiece());
+            
+            // Reset drop timer
+            dropTimer = 0;
+        }
+        
+        function checkMatches() {
+            let matchedBlocks = [];
+            let totalMatches = 0;
+            
+            // Check horizontal matches
+            for (let row = 0; row < BOARD_HEIGHT; row++) {
+                for (let col = 0; col < BOARD_WIDTH - 2; col++) {
+                    if (board[row][col] !== COLORS.EMPTY) {
+                        let matchLength = 1;
+                        let matchColor = board[row][col];
+                        
+                        while (col + matchLength < BOARD_WIDTH && board[row][col + matchLength] === matchColor) {
+                            matchLength++;
+                        }
+                        
+                        if (matchLength >= 3) {
+                            for (let i = 0; i < matchLength; i++) {
+                                matchedBlocks.push({row: row, col: col + i, color: matchColor});
+                            }
+                            totalMatches++;
+                        }
+                    }
+                }
+            }
+            
+            // Check vertical matches
+            for (let col = 0; col < BOARD_WIDTH; col++) {
+                for (let row = 0; row < BOARD_HEIGHT - 2; row++) {
+                    if (board[row][col] !== COLORS.EMPTY) {
+                        let matchLength = 1;
+                        let matchColor = board[row][col];
+                        
+                        while (row + matchLength < BOARD_HEIGHT && board[row + matchLength][col] === matchColor) {
+                            matchLength++;
+                        }
+                        
+                        if (matchLength >= 3) {
+                            for (let i = 0; i < matchLength; i++) {
+                                matchedBlocks.push({row: row + i, col: col, color: matchColor});
+                            }
+                            totalMatches++;
+                        }
+                    }
+                }
+            }
+            
+            // Check diagonal matches (top-left to bottom-right)
+            for (let row = 0; row < BOARD_HEIGHT - 2; row++) {
+                for (let col = 0; col < BOARD_WIDTH - 2; col++) {
+                    if (board[row][col] !== COLORS.EMPTY) {
+                        let matchLength = 1;
+                        let matchColor = board[row][col];
+                        
+                        while (row + matchLength < BOARD_HEIGHT && 
+                               col + matchLength < BOARD_WIDTH && 
+                               board[row + matchLength][col + matchLength] === matchColor) {
+                            matchLength++;
+                        }
+                        
+                        if (matchLength >= 3) {
+                            for (let i = 0; i < matchLength; i++) {
+                                matchedBlocks.push({row: row + i, col: col + i, color: matchColor});
+                            }
+                            totalMatches++;
+                        }
+                    }
+                }
+            }
+            
+            // Check diagonal matches (top-right to bottom-left)
+            for (let row = 0; row < BOARD_HEIGHT - 2; row++) {
+                for (let col = 2; col < BOARD_WIDTH; col++) {
+                    if (board[row][col] !== COLORS.EMPTY) {
+                        let matchLength = 1;
+                        let matchColor = board[row][col];
+                        
+                        while (row + matchLength < BOARD_HEIGHT && 
+                               col - matchLength >= 0 && 
+                               board[row + matchLength][col - matchLength] === matchColor) {
+                            matchLength++;
+                        }
+                        
+                        if (matchLength >= 3) {
+                            for (let i = 0; i < matchLength; i++) {
+                                matchedBlocks.push({row: row + i, col: col - i, color: matchColor});
+                            }
+                            totalMatches++;
+                        }
+                    }
+                }
+            }
+            
+            // Remove duplicates
+            let uniqueMatches = [];
+            let seen = new Set();
+            for (let block of matchedBlocks) {
+                let key = `${block.row},${block.col}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueMatches.push(block);
+                }
+            }
+            
+            // Clear matched blocks and create particles
+            if (uniqueMatches.length > 0) {
+                combos++;
+                let multiplier = Math.min(combos, 5);
+                
+                for (let block of uniqueMatches) {
+                    board[block.row][block.col] = COLORS.EMPTY;
+                    
+                    // Create particles
+                    for (let i = 0; i < 5; i++) {
+                        particles.push(new Particle(
+                            block.col * BLOCK_SIZE + BLOCK_SIZE / 2,
+                            block.row * BLOCK_SIZE + BLOCK_SIZE / 2,
+                            block.color
+                        ));
+                    }
+                }
+                
+                // Update score
+                let baseScore = uniqueMatches.length * 100;
+                score += baseScore * multiplier * level;
+                lines += totalMatches;
+                
+                // Update level
+                if (lines >= level * 10) {
+                    level++;
+                    dropSpeed = Math.max(10, 60 - level * 5);
+                }
+                
+                // Apply gravity
+                applyGravity();
+                
+                // Check for chain reactions
+                setTimeout(() => checkMatches(), 300);
+            } else {
+                combos = 0;
+            }
+        }
+        
+        function applyGravity() {
+            for (let col = 0; col < BOARD_WIDTH; col++) {
+                let writePos = BOARD_HEIGHT - 1;
+                
+                for (let row = BOARD_HEIGHT - 1; row >= 0; row--) {
+                    if (board[row][col] !== COLORS.EMPTY) {
+                        if (row !== writePos) {
+                            board[writePos][col] = board[row][col];
+                            board[row][col] = COLORS.EMPTY;
+                        }
+                        writePos--;
+                    }
+                }
+            }
+        }
+        
+        function keyPressed() {
+            if (gameOver) {
+                if (keyCode === ENTER) {
+                    resetGame();
+                }
+                return;
+            }
+            
+            if (key === 'p' || key === 'P') {
+                isPaused = !isPaused;
+                return;
+            }
+            
+            if (isPaused) return;
+            
+            // Movement
+            if (keyCode === LEFT_ARROW) {
+                currentPiece.move(-1, 0);
+            } else if (keyCode === RIGHT_ARROW) {
+                currentPiece.move(1, 0);
+            } else if (keyCode === DOWN_ARROW) {
+                if (currentPiece.move(0, 1)) {
+                    score += 1;
+                    dropTimer = 0;
+                }
+            } else if (keyCode === UP_ARROW) {
+                currentPiece.rotate();
+            } else if (key === ' ') {
+                // Hard drop
+                let dropped = 0;
+                while (currentPiece.move(0, 1)) {
+                    dropped++;
+                }
+                score += dropped * 2;
+                placePiece();
+            }
+        }
+        
+        function resetGame() {
+            // Reset all game variables
+            board = [];
+            for (let row = 0; row < BOARD_HEIGHT; row++) {
+                board[row] = [];
+                for (let col = 0; col < BOARD_WIDTH; col++) {
+                    board[row][col] = COLORS.EMPTY;
+                }
+            }
+            
+            score = 0;
+            level = 1;
+            lines = 0;
+            gameOver = false;
+            isPaused = false;
+            dropTimer = 0;
+            dropSpeed = 60;
+            particles = [];
+            combos = 0;
+            
+            currentPiece = generatePiece();
+            nextPieces = [];
+            for (let i = 0; i < 3; i++) {
+                nextPieces.push(generatePiece());
+            }
+        }
+    </script>
+</body>
+</html>

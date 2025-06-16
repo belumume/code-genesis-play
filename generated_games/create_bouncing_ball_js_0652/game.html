@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bounce Lab - Master the Art of Physics-Based Creation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <strong>Bounce Lab</strong><br>
+        Left Click: Spawn Ball | Right Click: Remove Ball<br>
+        Space: Pause | R: Reset | T: Toggle Trails<br>
+        ↑↓: Gravity | ←→: Bounciness | 1-5: Ball Size<br>
+        <span id="stats"></span>
+    </div>
+
+    <script>
+        // Game configuration
+        const config = {
+            maxBalls: 50,
+            gravity: 0.4,
+            friction: 0.99,
+            restitution: 0.8,
+            minBallSize: 10,
+            maxBallSize: 50,
+            trailLength: 20,
+            particleCount: 5,
+            colors: ['#FF006E', '#FB5607', '#FFBE0B', '#8338EC', '#3A86FF']
+        };
+
+        // Game state
+        let balls = [];
+        let particles = [];
+        let isPaused = false;
+        let showTrails = true;
+        let selectedSize = 3;
+        let gameMode = 'sandbox'; // sandbox, pattern, target
+        let score = 0;
+        let targetPattern = [];
+        let playerPattern = [];
+
+        // Ball class
+        class Ball {
+            constructor(x, y, radius) {
+                this.x = x;
+                this.y = y;
+                this.vx = random(-5, 5);
+                this.vy = random(-5, 5);
+                this.radius = radius;
+                this.color = random(config.colors);
+                this.trail = [];
+                this.mass = radius / 10;
+                this.id = Date.now() + random(1000);
+            }
+
+            update() {
+                if (isPaused) return;
+
+                // Apply gravity
+                this.vy += config.gravity * this.mass;
+
+                // Apply friction
+                this.vx *= config.friction;
+                this.vy *= config.friction;
+
+                // Update position
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Check boundaries
+                this.checkBoundaries();
+
+                // Update trail
+                if (showTrails) {
+                    this.trail.push({ x: this.x, y: this.y });
+                    if (this.trail.length > config.trailLength) {
+                        this.trail.shift();
+                    }
+                }
+            }
+
+            checkBoundaries() {
+                // Bottom boundary
+                if (this.y + this.radius > height) {
+                    this.y = height - this.radius;
+                    this.vy *= -config.restitution;
+                    this.createParticles();
+                }
+
+                // Top boundary
+                if (this.y - this.radius < 0) {
+                    this.y = this.radius;
+                    this.vy *= -config.restitution;
+                    this.createParticles();
+                }
+
+                // Right boundary
+                if (this.x + this.radius > width) {
+                    this.x = width - this.radius;
+                    this.vx *= -config.restitution;
+                    this.createParticles();
+                }
+
+                // Left boundary
+                if (this.x - this.radius < 0) {
+                    this.x = this.radius;
+                    this.vx *= -config.restitution;
+                    this.createParticles();
+                }
+            }
+
+            createParticles() {
+                // Create particle effects on collision
+                for (let i = 0; i < config.particleCount; i++) {
+                    particles.push(new Particle(this.x, this.y, this.color));
+                }
+            }
+
+            checkCollision(other) {
+                let dx = this.x - other.x;
+                let dy = this.y - other.y;
+                let distance = sqrt(dx * dx + dy * dy);
+                return distance < this.radius + other.radius;
+            }
+
+            resolveCollision(other) {
+                let dx = this.x - other.x;
+                let dy = this.y - other.y;
+                let distance = sqrt(dx * dx + dy * dy);
+                
+                // Normalize collision vector
+                dx /= distance;
+                dy /= distance;
+                
+                // Minimum translation distance
+                let mtd = (this.radius + other.radius - distance);
+                
+                // Resolve overlap
+                this.x += dx * mtd * 0.5;
+                this.y += dy * mtd * 0.5;
+                other.x -= dx * mtd * 0.5;
+                other.y -= dy * mtd * 0.5;
+                
+                // Calculate relative velocity
+                let vx = this.vx - other.vx;
+                let vy = this.vy - other.vy;
+                
+                // Calculate collision response
+                let dot = vx * dx + vy * dy;
+                if (dot > 0) return;
+                
+                let collision_scale = dot * config.restitution;
+                let collision_vx = dx * collision_scale;
+                let collision_vy = dy * collision_scale;
+                
+                // Apply collision response
+                let mass_ratio_1 = this.mass / (this.mass + other.mass);
+                let mass_ratio_2 = other.mass / (this.mass + other.mass);
+                
+                this.vx -= collision_vx * mass_ratio_2;
+                this.vy -= collision_vy * mass_ratio_2;
+                other.vx += collision_vx * mass_ratio_1;
+                other.vy += collision_vy * mass_ratio_1;
+                
+                this.createParticles();
+            }
+
+            draw() {
+                // Draw trail
+                if (showTrails && this.trail.length > 1) {
+                    noFill();
+                    for (let i = 1; i < this.trail.length; i++) {
+                        let alpha = map(i, 0, this.trail.length, 0, 100);
+                        stroke(red(this.color), green(this.color), blue(this.color), alpha);
+                        strokeWeight(map(i, 0, this.trail.length, 1, 3));
+                        line(this.trail[i-1].x, this.trail[i-1].y, this.trail[i].x, this.trail[i].y);
+                    }
+                }
+
+                // Draw ball with glow effect
+                push();
+                drawingContext.shadowBlur = 20;
+                drawingContext.shadowColor = this.color;
+                fill(this.color);
+                noStroke();
+                circle(this.x, this.y, this.radius * 2);
+                pop();
+
+                // Inner highlight
+                fill(255, 50);
+                noStroke();
+                circle(this.x - this.radius * 0.3, this.y - this.radius * 0.3, this.radius * 0.6);
+            }
+        }
+
+        // Particle class for effects
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = random(-5, 5);
+                this.vy = random(-5, 5);
+                this.color = color;
+                this.life = 255;
+                this.size = random(2, 6);
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.1;
+                this.life -= 10;
+                this.size *= 0.98;
+            }
+
+            draw() {
+                push();
+                fill(red(this.color), green(this.color), blue(this.color), this.life);
+                noStroke();
+                circle(this.x, this.y, this.size);
+                pop();
+            }
+
+            isDead() {
+                return this.life <= 0;
+            }
+        }
+
+        // Target for challenge mode
+        class Target {
+            constructor(x, y, radius) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.hit = false;
+            }
+
+            checkHit(ball) {
+                let d = dist(ball.x, ball.y, this.x, this.y);
+                if (d < ball.radius + this.radius) {
+                    this.hit = true;
+                    return true;
+                }
+                return false;
+            }
+
+            draw() {
+                push();
+                if (this.hit) {
+                    fill(0, 255, 0, 100);
+                } else {
+                    fill(255, 255, 0, 50);
+                }
+                stroke(255, 255, 0);
+                strokeWeight(2);
+                circle(this.x, this.y, this.radius * 2);
+                
+                // Draw target pattern
+                noFill();
+                for (let i = 1; i <= 3; i++) {
+                    circle(this.x, this.y, this.radius * 2 * i / 3);
+                }
+                pop();
+            }
+        }
+
+        let targets = [];
+
+        // p5.js setup function
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            colorMode(RGB);
+            
+            // Initialize challenge mode targets
+            if (gameMode === 'target') {
+                setupTargetMode();
+            }
+        }
+
+        // p5.js draw function
+        function draw() {
+            // Draw gradient background
+            drawGradientBackground();
+
+            // Update and draw particles
+            particles = particles.filter(p => {
+                p.update();
+                p.draw();
+                return !p.isDead();
+            });
+
+            // Update and draw balls
+            for (let i = 0; i < balls.length; i++) {
+                balls[i].update();
+                
+                // Check collisions with other balls
+                for (let j = i + 1; j < balls.length; j++) {
+                    if (balls[i].checkCollision(balls[j])) {
+                        balls[i].resolveCollision(balls[j]);
+                    }
+                }
+            }
+
+            // Draw balls
+            for (let ball of balls) {
+                ball.draw();
+            }
+
+            // Draw targets in target mode
+            if (gameMode === 'target') {
+                let allHit = true;
+                for (let target of targets) {
+                    target.draw();
+                    for (let ball of balls) {
+                        if (target.checkHit(ball)) {
+                            score += 10;
+                        }
+                    }
+                    if (!target.hit) allHit = false;
+                }
+                
+                // Check win condition
+                if (allHit && targets.length > 0) {
+                    drawWinMessage();
+                }
+            }
+
+            // Update stats
+            updateStats();
+
+            // Draw pause overlay
+            if (isPaused) {
+                drawPauseOverlay();
+            }
+        }
+
+        function drawGradientBackground() {
+            for (let i = 0; i <= height; i++) {
+                let inter = map(i, 0, height, 0, 1);
+                let c = lerpColor(color('#1a1a2e'), color('#16213e'), inter);
+                stroke(c);
+                line(0, i, width, i);
+            }
+        }
+
+        function drawPauseOverlay() {
+            push();
+            fill(0, 150);
+            rect(0, 0, width, height);
+            fill(255);
+            textAlign(CENTER, CENTER);
+            textSize(48);
+            text('PAUSED', width/2, height/2);
+            textSize(24);
+            text('Press SPACE to resume', width/2, height/2 + 60);
+            pop();
+        }
+
+        function drawWinMessage() {
+            push();
+            fill(0, 255, 0);
+            textAlign(CENTER, CENTER);
+            textSize(64);
+            text('YOU WIN!', width/2, height/2);
+            textSize(32);
+            text('Score: ' + score, width/2, height/2 + 80);
+            text('Press R to play again', width/2, height/2 + 120);
+            pop();
+        }
+
+        function updateStats() {
+            let stats = `Balls: ${balls.length}/${config.maxBalls} | `;
+            stats += `Gravity: ${config.gravity.toFixed(2)} | `;
+            stats += `Bounce: ${config.restitution.toFixed(2)} | `;
+            stats += `Score: ${score}`;
+            document.getElementById('stats').textContent = stats;
+        }
+
+        function setupTargetMode() {
+            targets = [];
+            for (let i = 0; i < 5; i++) {
+                targets.push(new Target(
+                    random(100, width - 100),
+                    random(height/2, height - 100),
+                    30
+                ));
+            }
+        }
+
+        // Mouse controls
+        function mousePressed() {
+            if (mouseButton === LEFT) {
+                // Spawn new ball
+                if (balls.length < config.maxBalls) {
+                    let size = config.minBallSize + (selectedSize - 1) * 10;
+                    balls.push(new Ball(mouseX, mouseY, size));
+                }
+            } else if (mouseButton === RIGHT) {
+                // Remove nearest ball
+                let nearestIndex = -1;
+                let nearestDist = Infinity;
+                
+                for (let i = 0; i < balls.length; i++) {
+                    let d = dist(mouseX, mouseY, balls[i].x, balls[i].y);
+                    if (d < nearestDist) {
+                        nearestDist = d;
+                        nearestIndex = i;
+                    }
+                }
+                
+                if (nearestIndex !== -1 && nearestDist < 100) {
+                    balls.splice(nearestIndex, 1);
+                }
+                
+                return false; // Prevent context menu
+            }
+        }
+
+        // Keyboard controls
+        function keyPressed() {
+            switch(key) {
+                case ' ':
+                    isPaused = !isPaused;
+                    break;
+                case 'r':
+                case 'R':
+                    balls = [];
+                    particles = [];
+                    score = 0;
+                    if (gameMode === 'target') {
+                        setupTargetMode();
+                    }
+                    break;
+                case 't':
+                case 'T':
+                    showTrails = !showTrails;
+                    if (!showTrails) {
+                        balls.forEach(ball => ball.trail = []);
+                    }
+                    break;
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                    selectedSize = parseInt(key);
+                    break;
+            }
+
+            // Arrow key controls
+            if (keyCode === UP_ARROW) {
+                config.gravity = min(config.gravity + 0.1, 2);
+            } else if (keyCode === DOWN_ARROW) {
+                config.gravity = max(config.gravity - 0.1, -0.5);
+            } else if (keyCode === RIGHT_ARROW) {
+                config.restitution = min(config.restitution + 0.05, 1);
+            } else if (keyCode === LEFT_ARROW) {
+                config.restitution = max(config.restitution - 0.05, 0.1);
+            }
+        }
+
+        // Prevent right-click context menu
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        // Handle window resize
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+    </script>
+</body>
+</html>
