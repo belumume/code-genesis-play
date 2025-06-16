@@ -3,9 +3,9 @@ services:
     name: ai-genesis-engine
     runtime: python
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: python run_server_prod.py
+    startCommand: python -m src.genesis_engine.run_server_prod
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false  # Add this in Render dashboard
       - key: FRONTEND_URL
-        value: https://*.lovable.app 
+        value: https://code-genesis-play.lovable.app 

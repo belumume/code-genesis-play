@@ -38,9 +38,11 @@ app.add_middleware(
         "http://localhost:8080", 
         "http://127.0.0.1:8080",
         "http://localhost:5173",
-        "https://*.lovable.app",
         "https://lovable.app",
-        os.getenv("FRONTEND_URL", "").strip()  # Allow custom frontend URL
+        "https://code-genesis-play.lovable.app",  # Your specific frontend URL
+        "https://*.lovable.app",
+        os.getenv("FRONTEND_URL", "").strip(),  # Allow custom frontend URL
+        "*"  # Temporary: Allow all origins for competition demo
     ],
     allow_credentials=True,
     allow_methods=["*"],

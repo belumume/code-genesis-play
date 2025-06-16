@@ -479,3 +479,4 @@ You work with:
 - Architect agent (original specifications)
 
 Generate ONLY corrected, complete HTML files that fix all reported errors."""
+ 
