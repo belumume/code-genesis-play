@@ -17,7 +17,7 @@ export default defineConfig(({ command, mode }) => {
     server: {
       // Security: Required port configuration for Lovable platform
       port: 8080,
-      host: "::1",
+      host: "0.0.0.0", // Changed from "::1" to "0.0.0.0" for IPv4 compatibility
       open: isDevelopment, // Auto-open browser in development
       cors: true,
       // Security: Additional server hardening
@@ -75,7 +75,7 @@ export default defineConfig(({ command, mode }) => {
     // Preview server configuration (for production builds)
     preview: {
       port: 8081,
-      host: "::1",
+      host: "0.0.0.0", // Changed from "::1" to "0.0.0.0" for IPv4 compatibility
       // Security: Preview server headers
       headers: {
         'X-Content-Type-Options': 'nosniff',
