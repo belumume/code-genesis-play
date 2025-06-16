@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Download, FileText } from 'lucide-react';
+import { Download, FileText, Play } from 'lucide-react';
 import type { GeneratedFile } from '@/types/game';
 
 interface FileViewerProps {
@@ -27,6 +27,20 @@ export function FileViewer({ file, isOpen, onClose, onDownload }: FileViewerProp
         return 'python';
       default:
         return 'text';
+    }
+  };
+
+  const playGame = () => {
+    if (file.type === 'html' || file.name.endsWith('.html')) {
+      // Create a blob URL for the HTML content and open in new tab
+      const blob = new Blob([file.content], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const newWindow = window.open(url, '_blank');
+      
+      // Clean up the blob URL after a delay
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
     }
   };
 
@@ -58,6 +72,15 @@ export function FileViewer({ file, isOpen, onClose, onDownload }: FileViewerProp
             {file.content.length} characters
           </div>
           <div className="flex gap-2">
+            {(file.type === 'html' || file.name.endsWith('.html')) && (
+              <Button
+                onClick={playGame}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Play className="h-4 w-4" />
+                Play Game
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={() => onDownload(file)}
