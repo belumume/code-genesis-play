@@ -145,8 +145,10 @@ class MultiAgentOrchestrator:
         """Execute the Architect agent phase."""
         session.current_phase = "architect"
         self.logger.phase("ARCHITECT", "Creating game design and technical plan...")
+        self.logger.agent_action("ARCHITECT", "Analyzing game concept", f"'{session.prompt}'")
         
         # Generate Game Design Document
+        self.logger.agent_action("ARCHITECT", "Creating Game Design Document")
         gdd_prompt = f"""As the ARCHITECT agent, create a comprehensive Game Design Document for this prompt:
             
 Prompt: "{session.prompt}"
@@ -165,8 +167,11 @@ Focus on creating a game that can be implemented in JavaScript/p5.js with simple
         gdd_content = self.ai_client.generate_game_design_document(session.prompt)
         
         session.game_design_document = gdd_content
+        self.logger.agent_action("ARCHITECT", "Game Design Document completed")
+        self.logger.file_created("GDD.md", "Game Design Document")
         
         # Generate Technical Plan
+        self.logger.agent_action("ARCHITECT", "Creating Technical Implementation Plan")
         tech_prompt = f"""As the ARCHITECT agent, create a detailed technical implementation plan.
 
 Game Concept: "{session.prompt}"
@@ -186,9 +191,12 @@ Break down into small, testable features that Engineer can implement one at a ti
         tech_content = self.ai_client.generate_technical_plan(gdd_content)
         
         session.technical_plan = {"content": tech_content}
+        self.logger.agent_action("ARCHITECT", "Technical Plan completed")
+        self.logger.file_created("TECH_PLAN.md", "Technical Implementation Plan")
         
         # Save documents
         await self._save_planning_documents(session)
+        self.logger.agent_action("ARCHITECT", "Planning phase complete - handing off to Engineer")
         return True
     
     async def _execute_autonomous_loop(self, session: GameGenerationSession) -> bool:
@@ -201,28 +209,36 @@ Break down into small, testable features that Engineer can implement one at a ti
             # Engineer Phase: Generate/Update JavaScript code
             session.current_phase = "engineer"
             self.logger.phase("ENGINEER", f"Generating JavaScript game code (Cycle {session.debug_cycles})")
+            self.logger.agent_action("ENGINEER", f"Starting code generation", f"Debug cycle {session.debug_cycles}")
             
             if not await self._execute_engineer_phase(session):
+                self.logger.agent_action("ENGINEER", "Code generation failed - triggering retry")
                 session.error_count += 1
                 continue
             
             # Sentry Phase: Test the generated code (simplified for now)
             session.current_phase = "sentry"
             self.logger.phase("SENTRY", "Testing generated JavaScript code...")
+            self.logger.agent_action("SENTRY", "Analyzing generated code for errors")
             
             test_results = await self._execute_sentry_phase(session)
             session.test_results = test_results
             
             if test_results["success"]:
                 # Code works! Save final output
+                self.logger.agent_action("SENTRY", "Code validation passed - no errors found!")
                 await self._save_final_game(session)
                 return True
             else:
                 # Code has errors, trigger Debugger
+                error_count = len(test_results.get("errors", []))
+                self.logger.agent_action("SENTRY", f"Found {error_count} errors - calling Debugger")
                 session.current_phase = "debugger"
                 self.logger.phase("DEBUGGER", f"Fixing errors (Debug cycle {session.debug_cycles})")
+                self.logger.agent_action("DEBUGGER", "Analyzing error report from Sentry")
                 
                 if not await self._execute_debugger_phase(session, test_results):
+                    self.logger.agent_action("DEBUGGER", "Debug attempt failed - will retry")
                     session.error_count += 1
                     continue
         
@@ -258,12 +274,15 @@ Requirements:
 Output only the complete HTML file content."""
         
         try:
+            self.logger.agent_action("ENGINEER", "Generating JavaScript/HTML5 code")
             code_content = self.ai_client.generate_javascript_game(
                 session.game_design_document,
                 session.technical_plan["content"]
             )
             
             session.generated_code = code_content
+            self.logger.agent_action("ENGINEER", "Code generation completed - handing off to Sentry")
+            self.logger.file_created("game.html", "JavaScript/HTML5 Game")
             return True
         except Exception as e:
             self.logger.error(f"Engineer phase failed: {str(e)}")
@@ -330,12 +349,14 @@ Your task:
 Output only the corrected complete HTML file content."""
         
         try:
+            self.logger.agent_action("DEBUGGER", "Applying code corrections")
             fixed_code = self.ai_client.generate_javascript_game(
                 session.game_design_document,
                 session.technical_plan["content"]
             )
             
             session.generated_code = fixed_code
+            self.logger.agent_action("DEBUGGER", "Code corrections applied - sending back to Sentry")
             self.logger.success("🔧 DEBUGGER: Code corrections applied")
             return True
         except Exception as e:

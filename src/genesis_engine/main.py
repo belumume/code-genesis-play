@@ -103,12 +103,18 @@ class GenesisEngine:
             dict: Generation results with session information
         """
         try:
+            # Generate unique session ID first
+            session_id = str(uuid.uuid4())[:8]
+            
             # Set up WebSocket logging if provided
             if websocket_logger:
                 self.logger.add_websocket_logger(websocket_logger)
+                self.logger.set_session_id(session_id)
+                self.logger.set_progress(0.0)
             
             self.logger.header("🚀 AI GENESIS ENGINE v2.1 - MULTI-AGENT SYSTEM")
             self.logger.info(f"Processing prompt: '{prompt}'")
+            self.logger.agent_action("SYSTEM", "Initializing multi-agent autonomous system")
             
             # Initialize project workspace
             project_name = self._generate_project_name(prompt)
@@ -119,24 +125,32 @@ class GenesisEngine:
                 
             self.file_manager.setup_project_structure(project_path)
             self.logger.success(f"Project workspace created: {project_path}")
-            
-            # Generate unique session ID
-            session_id = str(uuid.uuid4())[:8]
+            self.logger.set_progress(0.1)
             
             # Start multi-agent generation session
+            self.logger.agent_action("ARCHITECT", "Analyzing game concept and creating design")
+            self.logger.set_progress(0.2)
+            
             session = await self.multi_agent_orchestrator.start_generation_session(
                 prompt=prompt,
                 project_path=project_path,
                 session_id=session_id
             )
             
+            self.logger.set_progress(0.3)
+            self.logger.agent_action("ENGINEER", "Beginning JavaScript/HTML5 code generation")
+            
             # Process the session through all agents
             success = await self.multi_agent_orchestrator.process_session(session_id)
+            
+            self.logger.set_progress(0.9)
             
             # Get final session status
             final_status = self.multi_agent_orchestrator.get_session_status(session_id)
             
             if success:
+                self.logger.set_progress(1.0)
+                self.logger.agent_action("SYSTEM", "Multi-agent generation completed successfully!")
                 self.logger.header("✨ MULTI-AGENT GENESIS COMPLETE!")
                 self.logger.success(f"JavaScript/HTML5 game generated successfully!")
                 
