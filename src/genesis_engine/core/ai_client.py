@@ -1,6 +1,7 @@
+
 """
 AI Client for the Genesis Engine.
-Handles all interactions with Claude 4 Opus API with fallback to Claude 4 Sonnet, then mock data.
+Handles all interactions with Claude 4 Sonnet API with minimal fallback.
 Enhanced with better code validation to prevent recurring syntax errors.
 """
 import os
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 class AIClient:
     """
     Client for interacting with Anthropic's Claude API.
-    Falls back through model hierarchy: Sonnet 4 → Sonnet 3.7 → Haiku 3.5 → Mock responses.
+    Optimized for Claude 4 Sonnet with minimal fallback hierarchy.
     Enhanced with code validation to prevent syntax errors.
     """
     
@@ -27,11 +28,10 @@ class AIClient:
         self.api_key = self._get_api_key()
         self.base_url = "https://api.anthropic.com/v1/messages"
         
-        # Updated model fallback hierarchy for better availability
+        # Simplified model hierarchy - focus on Claude 4 Sonnet for best cost/performance balance
         self.model_hierarchy = [
-            "claude-sonnet-4-20250514",     # Primary: Claude 4 Sonnet (high performance, good availability)
-            "claude-3-7-sonnet-20250219",   # Fallback 1: Claude 3.7 Sonnet (extended thinking, reliable)
-            "claude-3-5-haiku-20241022"     # Fallback 2: Claude 3.5 Haiku (fast, highly available)
+            "claude-sonnet-4-20250514",     # Primary: Claude 4 Sonnet (best balance of capability and cost)
+            "claude-3-5-haiku-20241022"     # Fallback: Claude 3.5 Haiku (fastest, most available)
         ]
         self.current_model_index = 0
         
@@ -52,8 +52,8 @@ class AIClient:
             print("⚠️  No Anthropic API key found. Using mock responses for testing.")
         else:
             print("✅ Anthropic API key found. Using real AI integration.")
-            print(f"🎯 Optimized model hierarchy: {' → '.join(self.model_hierarchy)} → Mock")
-            print("🚀 Prioritizing Sonnet 4 for best balance of capability and availability")
+            print(f"🎯 Optimized for Claude 4 Sonnet: {' → '.join(self.model_hierarchy)} → Mock")
+            print("🚀 Prioritizing Sonnet 4 for best balance of capability, cost, and availability")
     
     def _get_api_key(self) -> Optional[str]:
         """Get API key from multiple sources."""
@@ -303,13 +303,12 @@ sys.exit()
         }
         
         # Adjust parameters based on model capabilities
-        max_tokens = 8192  # Default for most models
+        max_tokens = 64000  # Sonnet 4 supports large outputs
         temperature = 0.7
         
         if "sonnet-4" in model:
             max_tokens = 64000  # Sonnet 4 supports much larger outputs
-        elif "3-7-sonnet" in model:
-            max_tokens = 64000  # Sonnet 3.7 also supports larger outputs
+            temperature = 0.7   # Balanced creativity
         elif "haiku" in model:
             max_tokens = 8192   # Haiku has standard output limits
             temperature = 0.5   # Lower temperature for consistency on smaller model
@@ -344,11 +343,11 @@ sys.exit()
                     raise Exception(error_msg)
     
     async def _make_api_call(self, messages: list) -> str:
-        """Make an async API call with model fallback hierarchy."""
+        """Make an async API call with simplified model fallback."""
         if self.use_mock:
             return self._get_mock_response(messages[0]['content'])
         
-        # Try each model in the hierarchy
+        # Try each model in the simplified hierarchy
         for i, model in enumerate(self.model_hierarchy):
             try:
                 print(f"🤖 Trying {model}...")
@@ -424,7 +423,6 @@ Format as Markdown. Focus on Python/Pygame implementation. Be specific but conci
     
     def generate_asset_specifications(self, gdd_content: str) -> str:
         """Generate detailed asset specifications."""
-        # Asset generation is simpler - can start with faster model
         messages = [{
             'role': 'user',
             'content': f"""Based on this Game Design Document, create detailed asset specifications:
@@ -439,19 +437,6 @@ Create asset specifications that include:
 
 Format as Markdown. Be specific about colors, sizes, and styles. Keep it concise."""
         }]
-        
-        # For simpler tasks like asset specs, we can start with Haiku for speed
-        if not self.use_mock:
-            # Temporarily prioritize Haiku for this simpler task
-            original_hierarchy = self.model_hierarchy.copy()
-            if "claude-3-5-haiku-20241022" in self.model_hierarchy:
-                self.model_hierarchy = ["claude-3-5-haiku-20241022"] + [m for m in original_hierarchy if m != "claude-3-5-haiku-20241022"]
-            
-            result = self._run_async(self._make_api_call(messages))
-            
-            # Restore original hierarchy
-            self.model_hierarchy = original_hierarchy
-            return result
         
         return self._run_async(self._make_api_call(messages))
     

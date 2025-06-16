@@ -1,3 +1,4 @@
+
 """
 Configuration management for AI Genesis Engine.
 Centralized settings with environment variable support.
@@ -17,7 +18,7 @@ class Settings(BaseSettings):
     
     # API Configuration
     anthropic_api_key: Optional[str] = Field(None, env="ANTHROPIC_API_KEY")
-    anthropic_model: str = Field("claude-opus-4-20250514", env="ANTHROPIC_MODEL")
+    anthropic_model: str = Field("claude-sonnet-4-20250514", env="ANTHROPIC_MODEL")
     api_timeout: int = Field(60, env="API_TIMEOUT")
     max_retries: int = Field(3, env="MAX_RETRIES")
     
@@ -73,7 +74,7 @@ settings.test_output_dir.mkdir(parents=True, exist_ok=True)
 # Competition-specific constants
 COMPETITION_NAME = "Lovable AI Showdown"
 COMPETITION_PRIZE = "$10,000"
-MODEL_CATEGORY = "Claude 4 Opus"
+MODEL_CATEGORY = "Claude 4 Sonnet"
 PROJECT_TAGLINE = "Transform Ideas into Playable Games with AI"
 
 # Game generation phases with weights for progress tracking
@@ -92,6 +93,6 @@ SHOWCASE_FEATURES = [
     "Real-time progress tracking",
     "Professional code generation",
     "Instant playability",
-    "Claude 4 Opus powered",
+    "Claude 4 Sonnet powered",
     "Autonomous game design"
 ]
