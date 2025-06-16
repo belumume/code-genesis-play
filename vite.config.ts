@@ -55,6 +55,7 @@ export default defineConfig(({ command, mode }) => {
             vendor: ['react', 'react-dom'],
             ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
             supabase: ['@supabase/supabase-js'],
+            'syntax-highlighter': ['react-syntax-highlighter'],
           },
         },
       },
@@ -69,6 +70,8 @@ export default defineConfig(({ command, mode }) => {
         'react-dom',
         '@supabase/supabase-js',
         '@tanstack/react-query',
+        'react-syntax-highlighter',
+        'react-syntax-highlighter/dist/esm/styles/prism',
       ],
     },
     
