@@ -11,8 +11,19 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 import subprocess
 import time
+import re
+import os
 
-from .logger import EngineLogger
+# Set up logger at module level
+logger = logging.getLogger(__name__)
+
+# Try to import playwright, but gracefully handle if not installed
+try:
+    from playwright.async_api import async_playwright, Page, Browser, Error as PlaywrightError
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+    logger.warning("Playwright not installed. Using fallback syntax validation.")
 
 class SentryAgent:
     """
@@ -26,11 +37,34 @@ class SentryAgent:
     5. Report results to Debugger agent
     """
     
-    def __init__(self, logger: EngineLogger):
+    def __init__(self, logger: logging.Logger):
         self.logger = logger
         self.test_timeout = 10  # seconds
         self.max_console_errors = 5
+        self.browser: Optional[Browser] = None
+        self.playwright = None
         
+    async def initialize(self):
+        """Initialize Playwright browser for testing."""
+        if PLAYWRIGHT_AVAILABLE:
+            try:
+                self.playwright = await async_playwright().start()
+                self.browser = await self.playwright.chromium.launch(
+                    headless=True,
+                    args=['--no-sandbox', '--disable-setuid-sandbox']
+                )
+                self.logger.info("Playwright browser initialized successfully")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize Playwright: {str(e)}")
+                self.browser = None
+    
+    async def cleanup(self):
+        """Clean up browser resources."""
+        if self.browser:
+            await self.browser.close()
+        if self.playwright:
+            await self.playwright.stop()
+    
     async def test_javascript_code(self, html_content: str) -> Dict[str, Any]:
         """
         Test JavaScript/HTML5 game code in a headless browser environment.
@@ -166,7 +200,6 @@ class SentryAgent:
         js_content = ""
         
         # Look for script tags
-        import re
         script_pattern = r'<script[^>]*>(.*?)</script>'
         matches = re.findall(script_pattern, html_content, re.DOTALL | re.IGNORECASE)
         
@@ -327,4 +360,305 @@ class SentryAgent:
             return False
         except Exception as e:
             self.logger.warning(f"Browser testing setup failed: {str(e)}")
-            return False 
+            return False
+    
+    async def validate_game(self, html_content: str, game_name: str) -> Dict[str, any]:
+        """
+        Validate a generated HTML/JavaScript game.
+        
+        Args:
+            html_content: The complete HTML content of the game
+            game_name: Name of the game being tested
+            
+        Returns:
+            Dictionary with validation results
+        """
+        results = {
+            "success": False,
+            "errors": [],
+            "warnings": [],
+            "syntax_valid": False,
+            "browser_test_passed": False,
+            "console_errors": [],
+            "runtime_errors": []
+        }
+        
+        # Step 1: Basic syntax validation
+        syntax_results = self._validate_syntax(html_content)
+        results["syntax_valid"] = syntax_results["valid"]
+        results["errors"].extend(syntax_results["errors"])
+        results["warnings"].extend(syntax_results["warnings"])
+        
+        if not results["syntax_valid"]:
+            self.logger.error(f"Syntax validation failed for {game_name}")
+            return results
+        
+        # Step 2: Browser-based testing (if available)
+        if PLAYWRIGHT_AVAILABLE and self.browser:
+            browser_results = await self._test_in_browser(html_content, game_name)
+            results["browser_test_passed"] = browser_results["passed"]
+            results["console_errors"].extend(browser_results["console_errors"])
+            results["runtime_errors"].extend(browser_results["runtime_errors"])
+            results["errors"].extend(browser_results["errors"])
+        else:
+            # Fallback: enhanced static analysis
+            static_results = self._enhanced_static_analysis(html_content)
+            results["errors"].extend(static_results["errors"])
+            results["warnings"].extend(static_results["warnings"])
+        
+        # Determine overall success
+        results["success"] = (
+            results["syntax_valid"] and 
+            len(results["errors"]) == 0 and
+            (results["browser_test_passed"] if PLAYWRIGHT_AVAILABLE else True)
+        )
+        
+        return results
+    
+    def _validate_syntax(self, html_content: str) -> Dict[str, any]:
+        """Perform basic syntax validation on HTML/JS content."""
+        results = {
+            "valid": True,
+            "errors": [],
+            "warnings": []
+        }
+        
+        # Check HTML structure
+        if not html_content or len(html_content.strip()) < 100:
+            results["errors"].append("Generated content is too short or empty")
+            results["valid"] = False
+            return results
+        
+        # Essential HTML tags
+        required_tags = [
+            ("<!DOCTYPE html>", "Missing DOCTYPE declaration"),
+            ("<html", "Missing <html> tag"),
+            ("</html>", "Missing closing </html> tag"),
+            ("<head>", "Missing <head> tag"),
+            ("</head>", "Missing closing </head> tag"),
+            ("<body>", "Missing <body> tag"),
+            ("</body>", "Missing closing </body> tag")
+        ]
+        
+        for tag, error_msg in required_tags:
+            if tag not in html_content:
+                results["errors"].append(error_msg)
+                results["valid"] = False
+        
+        # Check for p5.js library
+        if "p5.js" not in html_content and "p5.min.js" not in html_content:
+            results["errors"].append("Missing p5.js library reference")
+            results["valid"] = False
+        
+        # Check for required p5.js functions
+        if "function setup()" not in html_content and "setup = function()" not in html_content:
+            results["errors"].append("Missing p5.js setup() function")
+            results["valid"] = False
+        
+        if "function draw()" not in html_content and "draw = function()" not in html_content:
+            results["errors"].append("Missing p5.js draw() function")
+            results["valid"] = False
+        
+        # Check for balanced braces
+        open_braces = html_content.count('{')
+        close_braces = html_content.count('}')
+        if open_braces != close_braces:
+            results["errors"].append(f"Unbalanced braces: {open_braces} open, {close_braces} close")
+            results["valid"] = False
+        
+        # Check for canvas element
+        if "<canvas" not in html_content and "createCanvas" not in html_content:
+            results["warnings"].append("No canvas element or createCanvas call found")
+        
+        return results
+    
+    def _enhanced_static_analysis(self, html_content: str) -> Dict[str, any]:
+        """Enhanced static analysis when browser testing is not available."""
+        results = {
+            "errors": [],
+            "warnings": []
+        }
+        
+        # Extract JavaScript code
+        js_matches = re.findall(r'<script[^>]*>(.*?)</script>', html_content, re.DOTALL)
+        if not js_matches:
+            results["errors"].append("No JavaScript code found in HTML")
+            return results
+        
+        js_code = '\n'.join(js_matches)
+        
+        # Common JavaScript errors
+        error_patterns = [
+            (r'}\s*}\s*}', "Multiple closing braces - possible syntax error"),
+            (r';\s*;', "Double semicolon detected"),
+            (r'function\s+function', "Double 'function' keyword"),
+            (r'const\s+const', "Double 'const' keyword"),
+            (r'let\s+let', "Double 'let' keyword"),
+            (r'var\s+var', "Double 'var' keyword")
+        ]
+        
+        for pattern, msg in error_patterns:
+            if re.search(pattern, js_code):
+                results["errors"].append(msg)
+        
+        # Check for undefined variables (basic)
+        common_undefined = [
+            (r'\bplayer\b(?!\.)', "Reference to 'player' without definition"),
+            (r'\benemy\b(?!\.)', "Reference to 'enemy' without definition"),
+            (r'\bscore\b(?!\.)', "Reference to 'score' without definition")
+        ]
+        
+        for pattern, msg in common_undefined:
+            matches = re.findall(pattern, js_code)
+            if matches and f"let {pattern[2:-6]}" not in js_code and f"var {pattern[2:-6]}" not in js_code:
+                results["warnings"].append(msg)
+        
+        return results
+    
+    async def _test_in_browser(self, html_content: str, game_name: str) -> Dict[str, any]:
+        """Test the game in an actual browser using Playwright."""
+        results = {
+            "passed": False,
+            "console_errors": [],
+            "runtime_errors": [],
+            "errors": []
+        }
+        
+        if not self.browser:
+            results["errors"].append("Browser not initialized")
+            return results
+        
+        page = None
+        temp_file = None
+        
+        try:
+            # Create temporary HTML file
+            temp_file = tempfile.NamedTemporaryFile(
+                mode='w',
+                suffix='.html',
+                delete=False,
+                encoding='utf-8'
+            )
+            temp_file.write(html_content)
+            temp_file.close()
+            
+            # Create new page
+            page = await self.browser.new_page()
+            
+            # Set up console message listener
+            console_messages = []
+            page.on("console", lambda msg: console_messages.append({
+                "type": msg.type,
+                "text": msg.text
+            }))
+            
+            # Set up error listener
+            page_errors = []
+            page.on("pageerror", lambda error: page_errors.append(str(error)))
+            
+            # Navigate to the game
+            await page.goto(f"file://{temp_file.name}", wait_until="networkidle")
+            
+            # Wait for p5.js to initialize
+            await asyncio.sleep(2)
+            
+            # Check for JavaScript errors
+            for msg in console_messages:
+                if msg["type"] == "error":
+                    results["console_errors"].append(msg["text"])
+            
+            results["runtime_errors"].extend(page_errors)
+            
+            # Test basic p5.js functionality
+            try:
+                # Check if canvas exists
+                canvas_exists = await page.evaluate("() => document.querySelector('canvas') !== null")
+                if not canvas_exists:
+                    results["errors"].append("No canvas element found after initialization")
+                
+                # Check if p5 is defined
+                p5_defined = await page.evaluate("() => typeof window.p5 !== 'undefined' || typeof p5 !== 'undefined'")
+                if not p5_defined:
+                    results["errors"].append("p5.js library not loaded properly")
+                
+                # Check if setup and draw functions exist
+                setup_exists = await page.evaluate("() => typeof setup === 'function'")
+                draw_exists = await page.evaluate("() => typeof draw === 'function'")
+                
+                if not setup_exists:
+                    results["errors"].append("setup() function not defined")
+                if not draw_exists:
+                    results["errors"].append("draw() function not defined")
+                
+                # If no critical errors, mark as passed
+                if (canvas_exists and p5_defined and setup_exists and draw_exists and
+                    len(results["console_errors"]) == 0 and len(results["runtime_errors"]) == 0):
+                    results["passed"] = True
+                    
+            except PlaywrightError as e:
+                results["errors"].append(f"Browser evaluation error: {str(e)}")
+            
+        except Exception as e:
+            results["errors"].append(f"Browser testing failed: {str(e)}")
+            self.logger.error(f"Browser test error for {game_name}: {str(e)}")
+        
+        finally:
+            # Cleanup
+            if page:
+                await page.close()
+            if temp_file and os.path.exists(temp_file.name):
+                os.unlink(temp_file.name)
+        
+        return results
+    
+    def generate_test_report(self, validation_results: Dict[str, any]) -> str:
+        """Generate a detailed test report."""
+        report = []
+        report.append("=== SENTRY AGENT TEST REPORT ===\n")
+        
+        # Overall status
+        status = "✅ PASSED" if validation_results["success"] else "❌ FAILED"
+        report.append(f"Overall Status: {status}")
+        report.append(f"Syntax Valid: {'✅ Yes' if validation_results['syntax_valid'] else '❌ No'}")
+        
+        if PLAYWRIGHT_AVAILABLE:
+            browser_status = '✅ Yes' if validation_results['browser_test_passed'] else '❌ No'
+            report.append(f"Browser Test Passed: {browser_status}")
+        
+        # Errors
+        if validation_results["errors"]:
+            report.append("\n🔴 Errors:")
+            for error in validation_results["errors"]:
+                report.append(f"  - {error}")
+        
+        # Console errors
+        if validation_results["console_errors"]:
+            report.append("\n🔴 Console Errors:")
+            for error in validation_results["console_errors"]:
+                report.append(f"  - {error}")
+        
+        # Runtime errors
+        if validation_results["runtime_errors"]:
+            report.append("\n🔴 Runtime Errors:")
+            for error in validation_results["runtime_errors"]:
+                report.append(f"  - {error}")
+        
+        # Warnings
+        if validation_results["warnings"]:
+            report.append("\n⚠️ Warnings:")
+            for warning in validation_results["warnings"]:
+                report.append(f"  - {warning}")
+        
+        return '\n'.join(report)
+
+
+# Singleton instance
+_sentry_instance = None
+
+async def get_sentry_agent() -> SentryAgent:
+    """Get or create the singleton Sentry agent instance."""
+    global _sentry_instance
+    if _sentry_instance is None:
+        _sentry_instance = SentryAgent(logger)
+        await _sentry_instance.initialize()
+    return _sentry_instance 

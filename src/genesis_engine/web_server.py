@@ -8,14 +8,17 @@ import json
 import logging
 import os
 import uuid
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
+from collections import defaultdict
+import time
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 from .main import GenesisEngine
 from .core.logger import EngineLogger
@@ -31,28 +34,109 @@ app = FastAPI(
     version="2.1.0"
 )
 
-# CORS middleware for frontend communication
+# Get allowed origins from environment
+ALLOWED_ORIGINS = [
+    "http://localhost:8080", 
+    "http://127.0.0.1:8080",
+    "http://localhost:5173",
+    "https://lovable.app",
+    "https://code-genesis-play.lovable.app",
+    "https://*.lovable.app"
+]
+
+# Add custom frontend URL if provided
+custom_frontend = os.getenv("FRONTEND_URL", "").strip()
+if custom_frontend:
+    ALLOWED_ORIGINS.append(custom_frontend)
+
+# CORS middleware with specific origins only
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8080", 
-        "http://127.0.0.1:8080",
-        "http://localhost:5173",
-        "https://lovable.app",
-        "https://code-genesis-play.lovable.app",  # Your specific frontend URL
-        "https://*.lovable.app",
-        os.getenv("FRONTEND_URL", "").strip(),  # Allow custom frontend URL
-        "*"  # Temporary: Allow all origins for competition demo
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
-# Request/Response models
+# Rate limiting implementation
+class RateLimiter:
+    def __init__(self, requests_per_minute: int = 60):
+        self.requests_per_minute = requests_per_minute
+        self.requests = defaultdict(list)
+    
+    def is_allowed(self, client_ip: str) -> bool:
+        now = time.time()
+        minute_ago = now - 60
+        
+        # Clean old requests
+        self.requests[client_ip] = [
+            req_time for req_time in self.requests[client_ip] 
+            if req_time > minute_ago
+        ]
+        
+        # Check if limit exceeded
+        if len(self.requests[client_ip]) >= self.requests_per_minute:
+            return False
+        
+        # Add current request
+        self.requests[client_ip].append(now)
+        return True
+
+# Initialize rate limiter
+rate_limiter = RateLimiter(requests_per_minute=30)
+
+# Middleware for security headers
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    # Rate limiting check
+    client_ip = request.client.host
+    if not rate_limiter.is_allowed(client_ip):
+        return JSONResponse(
+            status_code=429,
+            content={"error": "Rate limit exceeded. Please try again later."}
+        )
+    
+    response = await call_next(request)
+    
+    # Add security headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = "default-src 'self' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';"
+    
+    return response
+
+# Request/Response models with validation
 class GameGenerationRequest(BaseModel):
     prompt: str
     output_dir: Optional[str] = None
+    
+    @validator('prompt')
+    def validate_prompt(cls, v):
+        # Sanitize input
+        v = v.strip()
+        
+        # Check length
+        if len(v) < 10:
+            raise ValueError('Prompt must be at least 10 characters')
+        if len(v) > 500:
+            raise ValueError('Prompt must be less than 500 characters')
+        
+        # Remove any potential script injection
+        v = re.sub(r'<[^>]*>', '', v)
+        v = re.sub(r'[<>\"\'`]', '', v)
+        
+        # Check for suspicious patterns
+        suspicious_patterns = [
+            r'javascript:', r'data:', r'vbscript:', r'onload=',
+            r'onerror=', r'onclick=', r'<script', r'</script'
+        ]
+        for pattern in suspicious_patterns:
+            if re.search(pattern, v, re.IGNORECASE):
+                raise ValueError('Invalid characters in prompt')
+        
+        return v
 
 class GameGenerationResponse(BaseModel):
     success: bool
@@ -118,6 +202,10 @@ async def generate_game(request: GameGenerationRequest):
     try:
         logger.info(f"Received generation request: {request.prompt}")
         
+        # Additional validation
+        if not request.prompt or len(request.prompt.strip()) < 10:
+            raise HTTPException(status_code=400, detail="Prompt too short")
+        
         # Initialize Genesis Engine
         engine = GenesisEngine()
         
@@ -160,10 +248,22 @@ async def websocket_generate(websocket: WebSocket):
         request_data = json.loads(data)
         prompt = request_data.get("prompt", "").strip()
         
+        # Validate prompt
         if not prompt:
             await websocket.send_text(json.dumps({
                 "type": "error",
                 "message": "Empty prompt provided"
+            }))
+            return
+        
+        # Sanitize prompt
+        prompt = re.sub(r'<[^>]*>', '', prompt)
+        prompt = re.sub(r'[<>\"\'`]', '', prompt)
+        
+        if len(prompt) < 10 or len(prompt) > 500:
+            await websocket.send_text(json.dumps({
+                "type": "error",
+                "message": "Prompt must be between 10 and 500 characters"
             }))
             return
         

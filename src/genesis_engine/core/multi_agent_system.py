@@ -19,6 +19,7 @@ from datetime import datetime
 
 from .logger import EngineLogger
 from .ai_client import AIClient
+from .sentry_agent import get_sentry_agent
 
 class AgentRole(Enum):
     ARCHITECT = "architect"
@@ -290,41 +291,34 @@ Output only the complete HTML file content."""
     
     async def _execute_sentry_phase(self, session: GameGenerationSession) -> Dict[str, Any]:
         """Execute the Sentry agent phase (simplified testing)."""
-        # For now, simple validation - will enhance with Puppeteer later
-        code = session.generated_code
+        # Get or create Sentry agent instance
+        sentry = await get_sentry_agent()
         
-        # Basic syntax checks
-        errors = []
+        # Use the new validation method
+        self.logger.agent_action("SENTRY", "Performing comprehensive game validation")
+        validation_results = await sentry.validate_game(
+            session.generated_code,
+            session.project_path.name
+        )
         
-        if not code or len(code.strip()) < 100:
-            errors.append("Generated code is too short or empty")
+        # Generate test report
+        test_report = sentry.generate_test_report(validation_results)
+        self.logger.info(f"\n{test_report}")
         
-        if "p5.js" not in code and "p5" not in code:
-            errors.append("Missing p5.js library reference")
-        
-        if "function setup()" not in code:
-            errors.append("Missing p5.js setup() function")
-        
-        if "function draw()" not in code:
-            errors.append("Missing p5.js draw() function")
-        
-        if "</html>" not in code:
-            errors.append("HTML structure appears incomplete")
-        
-        success = len(errors) == 0
-        
-        if success:
-            self.logger.success("✅ SENTRY: Code validation passed")
+        # Log results
+        if validation_results["success"]:
+            self.logger.success("✅ SENTRY: All tests passed!")
         else:
-            self.logger.warning(f"⚠️ SENTRY: Found {len(errors)} errors")
-            for error in errors:
+            self.logger.warning(f"⚠️ SENTRY: Found {len(validation_results['errors'])} errors")
+            for error in validation_results["errors"]:
                 self.logger.error(f"  - {error}")
         
         return {
-            "success": success,
-            "errors": errors,
-            "error_count": len(errors),
-            "validation_type": "basic_syntax"
+            "success": validation_results["success"],
+            "errors": validation_results["errors"],
+            "error_count": len(validation_results["errors"]),
+            "validation_type": "comprehensive",
+            "browser_tested": validation_results.get("browser_test_passed", False)
         }
     
     async def _execute_debugger_phase(self, session: GameGenerationSession, test_results: Dict[str, Any]) -> bool:

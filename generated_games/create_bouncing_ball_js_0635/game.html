@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bounce Lab - Master the Art of Physics Simulation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            max-width: 300px;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .slider-container {
+            margin: 10px 0;
+        }
+        .slider {
+            width: 200px;
+            margin: 5px 0;
+        }
+        label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+        }
+        .mode-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h3>Bounce Lab</h3>
+        <p><strong>Controls:</strong></p>
+        <ul style="font-size: 12px; padding-left: 20px;">
+            <li><strong>Left Click:</strong> Spawn ball</li>
+            <li><strong>Click + Drag:</strong> Set velocity</li>
+            <li><strong>Right Click:</strong> Clear all</li>
+            <li><strong>Space:</strong> Pause/Resume</li>
+            <li><strong>G:</strong> Toggle gravity</li>
+            <li><strong>T:</strong> Toggle trails</li>
+            <li><strong>C:</strong> Cycle colors</li>
+            <li><strong>1-5:</strong> Presets</li>
+        </ul>
+        <div class="mode-info">
+            <p><strong>Challenge Mode:</strong> Press 'M' to toggle</p>
+            <p id="challenge-info"></p>
+        </div>
+    </div>
+    
+    <div id="controls">
+        <h4>Physics Controls</h4>
+        <div class="slider-container">
+            <label for="gravity">Gravity: <span id="gravity-value">1.0</span></label><br>
+            <input type="range" id="gravity" class="slider" min="0.1" max="2.0" step="0.1" value="1.0">
+        </div>
+        <div class="slider-container">
+            <label for="dampening">Bounce: <span id="dampening-value">0.85</span></label><br>
+            <input type="range" id="dampening" class="slider" min="0.5" max="1.0" step="0.05" value="0.85">
+        </div>
+        <div class="slider-container">
+            <label for="ballSize">Ball Size: <span id="size-value">20</span></label><br>
+            <input type="range" id="ballSize" class="slider" min="10" max="50" step="5" value="20">
+        </div>
+    </div>
+
+    <script>
+        // Ball class for physics simulation
+        class Ball {
+            constructor(x, y, vx, vy, radius, color) {
+                this.pos = createVector(x, y);
+                this.vel = createVector(vx, vy);
+                this.radius = radius;
+                this.color = color;
+                this.trail = [];
+                this.maxTrailLength = 30;
+                this.glowIntensity = 0;
+            }
+
+            update(gravity, dampening) {
+                // Apply gravity
+                if (gravityEnabled) {
+                    this.vel.y += gravity * 0.5;
+                }
+                
+                // Update position
+                this.pos.add(this.vel);
+                
+                // Check boundaries and bounce
+                if (this.pos.x - this.radius <= 0 || this.pos.x + this.radius >= width) {
+                    this.vel.x *= -dampening;
+                    this.pos.x = constrain(this.pos.x, this.radius, width - this.radius);
+                    this.createBounceEffect();
+                }
+                
+                if (this.pos.y - this.radius <= 0 || this.pos.y + this.radius >= height) {
+                    this.vel.y *= -dampening;
+                    this.pos.y = constrain(this.pos.y, this.radius, height - this.radius);
+                    this.createBounceEffect();
+                }
+                
+                // Add to trail
+                if (trailsEnabled) {
+                    this.trail.push({x: this.pos.x, y: this.pos.y});
+                    if (this.trail.length > this.maxTrailLength) {
+                        this.trail.shift();
+                    }
+                }
+                
+                // Update glow based on velocity
+                this.glowIntensity = map(this.vel.mag(), 0, 20, 0, 1);
+            }
+
+            createBounceEffect() {
+                // Create particle effect on bounce
+                for (let i = 0; i < 5; i++) {
+                    particles.push(new Particle(this.pos.x, this.pos.y, this.color));
+                }
+            }
+
+            display() {
+                // Draw trail
+                if (trailsEnabled && this.trail.length > 1) {
+                    noFill();
+                    for (let i = 1; i < this.trail.length; i++) {
+                        let alpha = map(i, 0, this.trail.length, 0, 100);
+                        stroke(red(this.color), green(this.color), blue(this.color), alpha);
+                        strokeWeight(map(i, 0, this.trail.length, 1, 3));
+                        line(this.trail[i-1].x, this.trail[i-1].y, this.trail[i].x, this.trail[i].y);
+                    }
+                }
+                
+                // Draw glow effect for fast-moving balls
+                if (this.glowIntensity > 0.3) {
+                    push();
+                    drawingContext.shadowBlur = 20 * this.glowIntensity;
+                    drawingContext.shadowColor = this.color;
+                    fill(this.color);
+                    noStroke();
+                    circle(this.pos.x, this.pos.y, this.radius * 2);
+                    pop();
+                }
+                
+                // Draw ball with shadow
+                push();
+                drawingContext.shadowBlur = 10;
+                drawingContext.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                drawingContext.shadowOffsetY = 3;
+                fill(this.color);
+                noStroke();
+                circle(this.pos.x, this.pos.y, this.radius * 2);
+                pop();
+                
+                // Draw highlight
+                push();
+                fill(255, 255, 255, 50);
+                noStroke();
+                circle(this.pos.x - this.radius * 0.3, this.pos.y - this.radius * 0.3, this.radius * 0.8);
+                pop();
+            }
+        }
+
+        // Particle class for effects
+        class Particle {
+            constructor(x, y, color) {
+                this.pos = createVector(x, y);
+                this.vel = p5.Vector.random2D().mult(random(2, 5));
+                this.color = color;
+                this.life = 255;
+                this.size = random(3, 8);
+            }
+
+            update() {
+                this.pos.add(this.vel);
+                this.vel.mult(0.95);
+                this.life -= 8;
+            }
+
+            display() {
+                push();
+                fill(red(this.color), green(this.color), blue(this.color), this.life);
+                noStroke();
+                circle(this.pos.x, this.pos.y, this.size);
+                pop();
+            }
+
+            isDead() {
+                return this.life <= 0;
+            }
+        }
+
+        // Target zone for challenge mode
+        class TargetZone {
+            constructor(x, y, radius) {
+                this.pos = createVector(x, y);
+                this.radius = radius;
+                this.hit = false;
+                this.hitTime = 0;
+            }
+
+            checkHit(ball) {
+                let d = p5.Vector.dist(this.pos, ball.pos);
+                if (d < this.radius + ball.radius) {
+                    if (!this.hit) {
+                        this.hit = true;
+                        this.hitTime = millis();
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            display() {
+                push();
+                if (this.hit) {
+                    let alpha = map(millis() - this.hitTime, 0, 1000, 255, 0);
+                    fill(50, 255, 50, alpha);
+                } else {
+                    fill(255, 100, 100, 50);
+                }
+                stroke(255, 100, 100);
+                strokeWeight(2);
+                circle(this.pos.x, this.pos.y, this.radius * 2);
+                
+                // Draw target pattern
+                noFill();
+                for (let i = 1; i <= 3; i++) {
+                    circle(this.pos.x, this.pos.y, this.radius * 2 * (i / 3));
+                }
+                pop();
+            }
+        }
+
+        // Global variables
+        let balls = [];
+        let particles = [];
+        let targetZones = [];
+        let gravity = 1.0;
+        let dampening = 0.85;
+        let ballSize = 20;
+        let isPaused = false;
+        let gravityEnabled = true;
+        let trailsEnabled = true;
+        let colorMode = 0; // 0: rainbow, 1: gradient, 2: solid
+        let dragStart = null;
+        let challengeMode = false;
+        let score = 0;
+        let challengeStartTime = 0;
+        let currentChallenge = 0;
+
+        // Color palettes
+        const colors = {
+            primary: '#0080FF',
+            secondary: '#FF6B35',
+            accent: '#32FF32',
+            rainbow: (velocity) => {
+                let hue = map(velocity, 0, 20, 0, 360);
+                colorMode(HSB);
+                let c = color(hue, 80, 100);
+                colorMode(RGB);
+                return c;
+            },
+            gradient: (height) => {
+                let t = map(height, 0, windowHeight, 0, 1);
+                return lerpColor(color('#0080FF'), color('#FF6B35'), t);
+            }
+        };
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            
+            // Setup sliders
+            select('#gravity').input(() => {
+                gravity = float(select('#gravity').value());
+                select('#gravity-value').html(gravity.toFixed(1));
+            });
+            
+            select('#dampening').input(() => {
+                dampening = float(select('#dampening').value());
+                select('#dampening-value').html(dampening.toFixed(2));
+            });
+            
+            select('#ballSize').input(() => {
+                ballSize = int(select('#ballSize').value());
+                select('#size-value').html(ballSize);
+            });
+        }
+
+        function draw() {
+            // Draw background with grid
+            background(240);
+            drawGrid();
+            
+            if (!isPaused) {
+                // Update and display balls
+                for (let i = balls.length - 1; i >= 0; i--) {
+                    balls[i].update(gravity, dampening);
+                    
+                    // Remove balls that are stuck or moving too slowly
+                    if (balls[i].vel.mag() < 0.1 && balls[i].pos.y > height - balls[i].radius - 5) {
+                        balls.splice(i, 1);
+                    }
+                }
+                
+                // Update particles
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    particles[i].update();
+                    if (particles[i].isDead()) {
+                        particles.splice(i, 1);
+                    }
+                }
+            }
+            
+            // Display everything
+            for (let ball of balls) {
+                ball.display();
+            }
+            
+            for (let particle of particles) {
+                particle.display();
+            }
+            
+            // Challenge mode elements
+            if (challengeMode) {
+                for (let zone of targetZones) {
+                    zone.display();
+                }
+                
+                // Check for hits
+                for (let ball of balls) {
+                    for (let zone of targetZones) {
+                        if (zone.checkHit(ball)) {
+                            score++;
+                        }
+                    }
+                }
+                
+                // Display challenge info
+                displayChallengeInfo();
+                
+                // Check win condition
+                if (targetZones.length > 0 && targetZones.every(zone => zone.hit)) {
+                    completeChallengeMode();
+                }
+            }
+            
+            // Draw velocity vector when dragging
+            if (dragStart) {
+                push();
+                stroke(255, 100, 100);
+                strokeWeight(3);
+                line(dragStart.x, dragStart.y, mouseX, mouseY);
+                
+                // Draw arrow head
+                let angle = atan2(mouseY - dragStart.y, mouseX - dragStart.x);
+                let arrowSize = 10;
+                push();
+                translate(mouseX, mouseY);
+                rotate(angle);
+                line(0, 0, -arrowSize, -arrowSize/2);
+                line(0, 0, -arrowSize, arrowSize/2);
+                pop();
+                
+                // Show velocity magnitude
+                let vel = dist(dragStart.x, dragStart.y, mouseX, mouseY) * 0.1;
+                fill(255);
+                stroke(0);
+                strokeWeight(1);
+                text(`Velocity: ${vel.toFixed(1)}`, mouseX + 10, mouseY - 10);
+                pop();
+            }
+            
+            // Display status
+            displayStatus();
+        }
+
+        function drawGrid() {
+            push();
+            stroke(220);
+            strokeWeight(1);
+            for (let x = 0; x < width; x += 50) {
+                line(x, 0, x, height);
+            }
+            for (let y = 0; y < height; y += 50) {
+                line(0, y, width, y);
+            }
+            pop();
+        }
+
+        function displayStatus() {
+            push();
+            fill(0);
+            noStroke();
+            textAlign(LEFT, BOTTOM);
+            text(`Balls: ${balls.length} | FPS: ${frameRate().toFixed(0)}`, 10, height - 10);
+            
+            if (isPaused) {
+                textAlign(CENTER, CENTER);
+                textSize(48);
+                fill(255, 100, 100);
+                text("PAUSED", width/2, height/2);
+            }
+            pop();
+        }
+
+        function displayChallengeInfo() {
+            let info = "";
+            switch(currentChallenge) {
+                case 0:
+                    info = `Hit all ${targetZones.length} targets! (${score}/${targetZones.length})`;
+                    break;
+                case 1:
+                    info = `Keep ${targetZones.length} balls airborne for 10 seconds!`;
+                    break;
+            }
+            select('#challenge-info').html(info);
+        }
+
+        function mousePressed() {
+            if (mouseButton === LEFT) {
+                dragStart = createVector(mouseX, mouseY);
+            } else if (mouseButton === RIGHT) {
+                // Clear all balls
+                balls = [];
+                particles = [];
+                return false; // Prevent context menu
+            }
+        }
+
+        function mouseReleased() {
+            if (mouseButton === LEFT && dragStart) {
+                // Calculate velocity from drag
+                let vx = (mouseX - dragStart.x) * 0.1;
+                let vy = (mouseY - dragStart.y) * 0.1;
+                
+                // Create ball with appropriate color
+                let ballColor;
+                switch(colorMode) {
+                    case 0: // Rainbow based on velocity
+                        ballColor = colors.rainbow(dist(0, 0, vx, vy));
+                        break;
+                    case 1: // Gradient based on height
+                        ballColor = colors.gradient(dragStart.y);
+                        break;
+                    case 2: // Solid color
+                        ballColor = color(colors.primary);
+                        break;
+                }
+                
+                balls.push(new Ball(dragStart.x, dragStart.y, vx, vy, ballSize, ballColor));
+                dragStart = null;
+            }
+        }
+
+        function keyPressed() {
+            switch(key) {
+                case ' ':
+                    isPaused = !isPaused;
+                    break;
+                case 'g':
+                case 'G':
+                    gravityEnabled = !gravityEnabled;
+                    break;
+                case 't':
+                case 'T':
+                    trailsEnabled = !trailsEnabled;
+                    break;
+                case 'c':
+                case 'C':
+                    colorMode = (colorMode + 1) % 3;
+                    break;
+                case 'm':
+                case 'M':
+                    toggleChallengeMode();
+                    break;
+                case '1':
+                    loadPreset(1);
+                    break;
+                case '2':
+                    loadPreset(2);
+                    break;
+                case '3':
+                    loadPreset(3);
+                    break;
+                case '4':
+                    loadPreset(4);
+                    break;
+                case '5':
+                    loadPreset(5);
+                    break;
+            }
+        }
+
+        function toggleChallengeMode() {
+            challengeMode = !challengeMode;
+            if (challengeMode) {
+                setupChallenge();
+            } else {
+                targetZones = [];
+                score = 0;
+            }
+        }
+
+        function setupChallenge() {
+            balls = [];
+            particles = [];
+            targetZones = [];
+            score = 0;
+            challengeStartTime = millis();
+            
+            // Create random target zones
+            currentChallenge = 0; // Target hitting challenge
+            for (let i = 0; i < 3; i++) {
+                let x = random(100, width - 100);
+                let y = random(height/2, height - 100);
+                targetZones.push(new TargetZone(x, y, 40));
+            }
+        }
+
+        function completeChallengeMode() {
+            alert(`Challenge Complete! Time: ${((millis() - challengeStartTime) / 1000).toFixed(2)}s`);
+            toggleChallengeMode();
+        }
+
+        function loadPreset(num) {
+            switch(num) {
+                case 1: // Low gravity moon bounce
+                    gravity = 0.1;
+                    dampening = 0.95;
+                    ballSize = 30;
+                    break;
+                case 2: // High gravity quick settle
+                    gravity = 2.0;
+                    dampening = 0.6;
+                    ballSize = 15;
+                    break;
+                case 3: // Perfect elastic
+                    gravity = 0.5;
+                    dampening = 1.0;
+                    ballSize = 20;
+                    break;
+                case 4: // Tiny fast balls
+                    gravity = 1.0;
+                    dampening = 0.9;
+                    ballSize = 10;
+                    break;
+                case 5: // Big slow balls
+                    gravity = 0.3;
+                    dampening = 0.7;
+                    ballSize = 50;
+                    break;
+            }
+            
+            // Update sliders
+            select('#gravity').value(gravity);
+            select('#gravity-value').html(gravity.toFixed(1));
+            select('#dampening').value(dampening);
+            select('#dampening-value').html(dampening.toFixed(2));
+            select('#ballSize').value(ballSize);
+            select('#size-value').html(ballSize);
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+
+        // Prevent right-click context menu
+        document.addEventListener('contextmenu', event => event.preventDefault());
+    </script>
+</body>
+</html>

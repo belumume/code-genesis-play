@@ -19,6 +19,12 @@ pydantic>=2.4.0,<3.0.0
 pydantic-settings>=2.0.0,<3.0.0
 typing-extensions>=4.5.0
 
+# Browser Testing (for Sentry Agent)
+playwright>=1.40.0,<2.0.0
+
+# Testing Dependencies
+httpx>=0.25.0,<1.0.0
+
 # Environment & Setup
 python-dotenv>=1.0.0,<2.0.0
 

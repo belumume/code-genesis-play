@@ -72,7 +72,7 @@ export function GameGenerator() {
 
   // Redirect to auth if not authenticated
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (!authLoading && !isAuthenticated && !window.location.pathname.includes('/auth')) {
       window.location.href = '/auth';
     }
   }, [authLoading, isAuthenticated]);
