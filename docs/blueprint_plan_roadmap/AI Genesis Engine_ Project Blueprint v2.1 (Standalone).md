@@ -10,7 +10,7 @@
 ### **1.2. Goals & Objectives**
 
 * **Primary Goal:** Win the $10,000 Grand Prize in the Lovable AI Showdown.  
-* **Secondary Goal:** Win the $10,000 model-specific prize for Claude 4 Opus.  
+* **Secondary Goal:** Win the $10,000 model-specific prize for Claude 4 Sonnet.  
 * **Core Technical Objective:** To architect an engine that generates **JavaScript/HTML5** game code to enable direct, in-browser gameplay, fulfilling modern web application standards.  
 * **Demonstration Objective:** Allow judges to interact with a live web app, enter their own prompts, and witness the entire autonomous design, coding, testing, and debugging loop, culminating in a game they can immediately play.
 
@@ -35,10 +35,10 @@
 
 * **The Human (Project Director):** The Project Director's role is purely strategic: to provide the initial vision (the prompt) and to observe the autonomous system. The Director does not verify code; they verify that the system as a whole achieves its goal.  
 * **The AI Agents (The Autonomous Team):**  
-  * **Architect (Claude Opus):** The Visionary. Creates the high-level plan.  
-  * **Engineer (Claude Opus):** The Coder. Executes one task from the plan.  
+  * **Architect (Claude Sonnet):** The Visionary. Creates the high-level plan.  
+  * **Engineer (Claude Sonnet):** The Coder. Executes one task from the plan.  
   * **Sentry (Headless Browser \- Puppeteer/Playwright):** The QA. A merciless, automated script that only reports success (no errors) or failure (provides the exact error).  
-  * **Debugger (Claude Opus):** The Fixer. Is activated only on failure, receiving the goal, the broken code, and the error to provide a correction.
+  * **Debugger (Claude Sonnet):** The Fixer. Is activated only on failure, receiving the goal, the broken code, and the error to provide a correction.
 
 ### **2.2. Development Methodology**
 
@@ -62,7 +62,7 @@
 * **TR2:** Backend: Python/FastAPI.  
 * **TR3:** Generated Game Language: **JavaScript** (p5.js or similar).  
 * **TR4:** Automated Testing: A headless browser framework (e.g., Puppeteer, Playwright) accessible by the Python backend.  
-* **TR5:** AI Model: Claude 4 Opus.
+* **TR5:** AI Model: Claude 4 Sonnet.
 
 ## **4\. Detailed Architecture & Technology**
 
@@ -109,7 +109,7 @@ graph TD
 
 * **Frontend:** React, TypeScript, Vite, TailwindCSS  
 * **Backend:** Python 3.10+, FastAPI, WebSockets  
-* **AI Model:** Claude 4 Opus  
+* **AI Model:** Claude 4 Sonnet  
 * **Generated Game Language:** **JavaScript (p5.js recommended)**  
 * **Autonomous Testing:** **Puppeteer** or **Playwright** (integrated with Python backend)
 
