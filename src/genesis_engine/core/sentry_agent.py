@@ -394,14 +394,26 @@ class SentryAgent:
             return results
         
         # Step 2: Browser-based testing (if available)
-        if PLAYWRIGHT_AVAILABLE and self.browser:
-            browser_results = await self._test_in_browser(html_content, game_name)
-            results["browser_test_passed"] = browser_results["passed"]
-            results["console_errors"].extend(browser_results["console_errors"])
-            results["runtime_errors"].extend(browser_results["runtime_errors"])
-            results["errors"].extend(browser_results["errors"])
+        if PLAYWRIGHT_AVAILABLE:
+            # Initialize browser if not already done
+            if not self.browser:
+                await self.initialize()
+            
+            if self.browser:
+                browser_results = await self._test_in_browser(html_content, game_name)
+                results["browser_test_passed"] = browser_results["passed"]
+                results["console_errors"].extend(browser_results["console_errors"])
+                results["runtime_errors"].extend(browser_results["runtime_errors"])
+                results["errors"].extend(browser_results["errors"])
+            else:
+                # Fallback: enhanced static analysis
+                self.logger.warning("Browser initialization failed, using static analysis")
+                static_results = self._enhanced_static_analysis(html_content)
+                results["errors"].extend(static_results["errors"])
+                results["warnings"].extend(static_results["warnings"])
         else:
             # Fallback: enhanced static analysis
+            self.logger.info("Playwright not available, using static analysis")
             static_results = self._enhanced_static_analysis(html_content)
             results["errors"].extend(static_results["errors"])
             results["warnings"].extend(static_results["warnings"])
@@ -410,7 +422,7 @@ class SentryAgent:
         results["success"] = (
             results["syntax_valid"] and 
             len(results["errors"]) == 0 and
-            (results["browser_test_passed"] if PLAYWRIGHT_AVAILABLE else True)
+            (results["browser_test_passed"] if PLAYWRIGHT_AVAILABLE and self.browser else len(results["errors"]) == 0)
         )
         
         return results

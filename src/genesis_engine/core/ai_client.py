@@ -1,4 +1,3 @@
-
 """
 AI Client for the Genesis Engine.
 Handles all interactions with Claude 4 Sonnet API with minimal fallback.
@@ -425,7 +424,7 @@ Create a technical plan that includes:
 4. Key Technical Challenges
 5. Dependencies and Libraries
 
-Format as Markdown. Focus on Python/Pygame implementation. Be specific but concise."""
+Format as Markdown. Focus on JavaScript/p5.js implementation in a single HTML file. Be specific but concise."""
         }]
         
         return self._run_async(self._make_api_call(messages))

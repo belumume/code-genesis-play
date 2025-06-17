@@ -51,7 +51,7 @@ const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000';
 
 // Detect if running on Lovable platform
 const isLovablePlatform = window.location.hostname.includes('lovable.app');
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+const DEMO_MODE = false; // Disabled for production
 
 export function GameGenerator() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
