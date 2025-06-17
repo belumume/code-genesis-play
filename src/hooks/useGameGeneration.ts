@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useApiConfig } from './useApiConfig';
 import { supabase } from '@/integrations/supabase/client';
@@ -116,6 +115,7 @@ export function useGameGeneration() {
               projectPath: update.project_path,
               sessionId: update.session_id,
               gameFile: update.game_file,
+              cloudUrl: update.cloud_url,
               debugCycles: update.debug_cycles,
               error: update.error
             };
@@ -130,8 +130,10 @@ export function useGameGeneration() {
                 timestamp: new Date().toISOString()
               });
               
-              // Fetch generated files
-              fetchGeneratedFiles(update.project_name);
+              // Only fetch files if we don't have a cloud URL
+              if (!update.cloud_url && update.project_name) {
+                fetchGeneratedFiles(update.project_name);
+              }
               
               toast.success('Game generated successfully!');
             } else {
@@ -230,6 +232,7 @@ export function useGameGeneration() {
               projectPath: update.project_path,
               sessionId: update.session_id,
               gameFile: update.game_file,
+              cloudUrl: update.cloud_url,
               debugCycles: update.debug_cycles,
               error: update.error
             };
@@ -244,8 +247,10 @@ export function useGameGeneration() {
                 timestamp: new Date().toISOString()
               });
               
-              // Fetch generated files
-              fetchGeneratedFiles(update.project_name);
+              // Only fetch files if we don't have a cloud URL
+              if (!update.cloud_url && update.project_name) {
+                fetchGeneratedFiles(update.project_name);
+              }
               
               toast.success('Game generated successfully!');
             } else {
@@ -350,7 +355,11 @@ export function useGameGeneration() {
           timestamp: new Date().toISOString()
         });
         
-        fetchGeneratedFiles(result.project_name);
+        // Only fetch files if we don't have a cloud URL
+        if (!result.cloud_url && result.project_name) {
+          fetchGeneratedFiles(result.project_name);
+        }
+        
         toast.success('Game generated successfully!');
       } else {
         addProgressLog({

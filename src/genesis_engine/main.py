@@ -1,7 +1,7 @@
 """
-AI Genesis Engine - Main Entry Point v2.1
+AI Genesis Engine - Main Entry Point v2.3
 Transforms single-sentence prompts into complete, playable JavaScript/HTML5 games
-using autonomous multi-agent collaboration.
+using autonomous multi-agent collaboration with cloud storage.
 """
 import sys
 import argparse
@@ -20,7 +20,7 @@ from .utils.file_manager import FileManager
 
 class GenesisEngine:
     """
-    The main Genesis Engine orchestrator v2.1.
+    The main Genesis Engine orchestrator v2.3.
     Manages the multi-agent autonomous game generation process.
     """
     
@@ -32,7 +32,7 @@ class GenesisEngine:
         
     async def run_async(self, prompt: str, output_dir: Optional[str] = None) -> bool:
         """
-        Execute the complete Genesis Engine v2.1 workflow with multi-agent system.
+        Execute the complete Genesis Engine v2.3 workflow with multi-agent system.
         
         Args:
             prompt: The game concept description
@@ -42,7 +42,7 @@ class GenesisEngine:
             bool: True if successful, False otherwise
         """
         try:
-            self.logger.header("🚀 AI GENESIS ENGINE v2.1 - MULTI-AGENT AUTONOMOUS SYSTEM")
+            self.logger.header("🚀 AI GENESIS ENGINE v2.3 - MULTI-AGENT AUTONOMOUS SYSTEM")
             self.logger.info(f"Processing prompt: '{prompt}'")
             
             # Initialize project workspace
@@ -84,7 +84,7 @@ class GenesisEngine:
                 return False
                 
         except Exception as e:
-            self.logger.error(f"Genesis Engine v2.1 failed: {str(e)}")
+            self.logger.error(f"Genesis Engine v2.3 failed: {str(e)}")
             import traceback
             self.logger.error(f"Full traceback: {traceback.format_exc()}")
             return False
@@ -112,7 +112,7 @@ class GenesisEngine:
                 self.logger.set_session_id(session_id)
                 self.logger.set_progress(0.0)
             
-            self.logger.header("🚀 AI GENESIS ENGINE v2.1 - MULTI-AGENT SYSTEM")
+            self.logger.header("🚀 AI GENESIS ENGINE v2.3 - MULTI-AGENT SYSTEM")
             self.logger.info(f"Processing prompt: '{prompt}'")
             self.logger.agent_action("SYSTEM", "Initializing multi-agent autonomous system")
             
@@ -154,12 +154,17 @@ class GenesisEngine:
                 self.logger.header("✨ MULTI-AGENT GENESIS COMPLETE!")
                 self.logger.success(f"JavaScript/HTML5 game generated successfully!")
                 
+                # Determine if we have a cloud URL or local path
+                game_file = final_status.get("final_html_file", "")
+                is_cloud_url = game_file.startswith("http://") or game_file.startswith("https://")
+                
                 return {
                     "success": True,
                     "project_path": str(project_path),
                     "project_name": project_name,
                     "session_id": session_id,
-                    "game_file": final_status.get("final_html_file"),
+                    "game_file": game_file,
+                    "cloud_url": game_file if is_cloud_url else None,
                     "debug_cycles": final_status.get("debug_cycles", 0),
                     "multi_agent_demo": True,
                     "output_format": "javascript_html5"
@@ -174,7 +179,7 @@ class GenesisEngine:
                 }
                 
         except Exception as e:
-            self.logger.error(f"Genesis Engine v2.1 failed: {str(e)}")
+            self.logger.error(f"Genesis Engine v2.3 failed: {str(e)}")
             return {
                 "success": False,
                 "error": str(e)
@@ -213,7 +218,7 @@ class GenesisEngine:
 def main():
     """Main entry point for the Genesis Engine CLI."""
     parser = argparse.ArgumentParser(
-        description="AI Genesis Engine v2.1 - Generate JavaScript/HTML5 games with multi-agent AI",
+        description="AI Genesis Engine v2.3 - Generate JavaScript/HTML5 games with multi-agent AI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -227,6 +232,7 @@ Multi-Agent System:
   - Debugger Agent: Fixes errors autonomously
 
 Output: Complete JavaScript/HTML5 games playable in browser
+Cloud Storage: Games are uploaded to persistent cloud storage
         """
     )
     
@@ -252,7 +258,7 @@ Output: Complete JavaScript/HTML5 games playable in browser
         print("Error: Please provide a game concept prompt")
         sys.exit(1)
     
-    # Initialize and run the Genesis Engine v2.1
+    # Initialize and run the Genesis Engine v2.3
     engine = GenesisEngine()
     success = engine.run(args.prompt, args.output)
     

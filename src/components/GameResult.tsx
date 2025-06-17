@@ -27,6 +27,14 @@ export function GameResult({ result, onDownloadFile }: GameResultProps) {
   };
 
   const playGame = () => {
+    // Check if we have a cloud URL first
+    if (result.cloudUrl) {
+      window.open(result.cloudUrl, '_blank');
+      toast.success('Game opened in new tab!');
+      return;
+    }
+    
+    // Fallback to local file if available
     const gameFile = result.files?.find(f => f.name === 'game.html' || f.name.endsWith('.html'));
     if (gameFile) {
       const blob = new Blob([gameFile.content], { type: 'text/html' });
@@ -61,7 +69,7 @@ export function GameResult({ result, onDownloadFile }: GameResultProps) {
   }
 
   const gameFile = result.files?.find(f => f.name === 'game.html' || f.name.endsWith('.html'));
-  const hasPlayableGame = !!gameFile;
+  const hasPlayableGame = !!result.cloudUrl || !!gameFile;
 
   return (
     <>
@@ -86,6 +94,11 @@ export function GameResult({ result, onDownloadFile }: GameResultProps) {
             <Badge variant="secondary">
               Project: {result.projectName}
             </Badge>
+            {result.cloudUrl && (
+              <Badge variant="secondary" className="bg-blue-100">
+                ☁️ Cloud Hosted
+              </Badge>
+            )}
           </div>
 
           {hasPlayableGame && (
@@ -95,8 +108,24 @@ export function GameResult({ result, onDownloadFile }: GameResultProps) {
                 Play Game
               </Button>
               <p className="text-sm text-muted-foreground">
-                🎮 Your game is ready to play!
+                {result.cloudUrl 
+                  ? '🌐 Your game is hosted in the cloud!'
+                  : '🎮 Your game is ready to play!'}
               </p>
+            </div>
+          )}
+
+          {result.cloudUrl && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm font-medium text-blue-800 mb-1">Permanent Game URL:</p>
+              <a 
+                href={result.cloudUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xs font-mono text-blue-600 hover:underline break-all"
+              >
+                {result.cloudUrl}
+              </a>
             </div>
           )}
 

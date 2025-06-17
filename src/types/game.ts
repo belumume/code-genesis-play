@@ -1,5 +1,3 @@
-
-
 export interface GeneratedFile {
   name: string;
   path: string;
@@ -13,6 +11,7 @@ export interface GameGenerationResult {
   projectPath?: string;
   sessionId?: string;
   gameFile?: string;
+  cloudUrl?: string;
   debugCycles?: number;
   error?: string;
   files?: GeneratedFile[];

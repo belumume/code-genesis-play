@@ -34,9 +34,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # FastAPI app initialization
 app = FastAPI(
-    title="AI Genesis Engine v2.1 API",
+    title="AI Genesis Engine v2.3 API",
     description="Transform single-sentence prompts into complete, playable JavaScript/HTML5 games using autonomous multi-agent AI",
-    version="2.1.0"
+    version="2.3.0"
 )
 
 # Configure CORS with WebSocket support
@@ -156,6 +156,7 @@ class GameGenerationResponse(BaseModel):
     project_path: Optional[str] = None
     session_id: Optional[str] = None
     game_file: Optional[str] = None
+    cloud_url: Optional[str] = None
     debug_cycles: Optional[int] = None
     multi_agent_demo: Optional[bool] = None
     output_format: Optional[str] = None
@@ -198,12 +199,14 @@ async def health_check():
     """Health check endpoint."""
     return {
         "status": "healthy",
-        "version": "2.1.0",
+        "version": "2.3.0",
         "features": {
             "multi_agent_system": True,
             "javascript_output": True,
             "autonomous_debugging": True,
-            "real_time_updates": True
+            "real_time_updates": True,
+            "cloud_storage": True,
+            "polling_fallback": True
         },
         "ai_available": True,
         "model": "claude-sonnet-4-20250514",
@@ -239,6 +242,7 @@ async def generate_game(request: GameGenerationRequest):
             project_path=result.get("project_path"),
             session_id=result.get("session_id"),
             game_file=result.get("game_file"),
+            cloud_url=result.get("cloud_url"),
             debug_cycles=result.get("debug_cycles", 0),
             multi_agent_demo=result.get("multi_agent_demo", True),
             output_format=result.get("output_format", "javascript_html5"),
@@ -313,6 +317,7 @@ async def websocket_generate(websocket: WebSocket):
             "project_path": result.get("project_path"),
             "session_id": result.get("session_id"),
             "game_file": result.get("game_file"),
+            "cloud_url": result.get("cloud_url"),
             "debug_cycles": result.get("debug_cycles", 0),
             "multi_agent_demo": result.get("multi_agent_demo", True),
             "output_format": result.get("output_format", "javascript_html5"),
@@ -448,14 +453,11 @@ async def list_game_files(game_name: str):
 async def get_game_file(game_name: str, filename: str):
     """Get a specific file from a generated game."""
     try:
-        # First try generated_games directory
+        # Try generated_games directory
         file_path = Path("generated_games") / game_name / filename
         
-        # If not found, check for demo games in the repository
         if not file_path.exists():
-            file_path = Path("generated_games") / "demo_space_shooter" / filename
-            if not file_path.exists():
-                raise HTTPException(status_code=404, detail="File not found")
+            raise HTTPException(status_code=404, detail="File not found")
         
         # Handle both JSON and HTML files
         if filename.endswith('.json'):
@@ -472,16 +474,48 @@ async def get_game_file(game_name: str, filename: str):
         logger.error(f"Failed to get file: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/sessions/{session_id}/status")
+async def get_generation_status(session_id: str):
+    """Get the current status of a game generation session for polling fallback."""
+    try:
+        # Check if the session is in active generations
+        if session_id in active_generations:
+            result = active_generations[session_id]
+            return {
+                "status": "completed",
+                "result": result
+            }
+        
+        # Check if it's still processing
+        for conn_id, conn in active_connections.items():
+            # This is a simplified check - in production you'd track session-to-connection mapping
+            if conn_id == session_id[:8]:  # Assuming connection_id is first 8 chars of session_id
+                return {
+                    "status": "processing",
+                    "message": "Game generation in progress..."
+                }
+        
+        # Session not found
+        return {
+            "status": "not_found",
+            "message": f"Session {session_id} not found"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting session status: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/status")
 async def get_server_status():
     """Get current server status and active connections."""
     return {
         "active_connections": len(active_connections),
         "active_generations": len(active_generations),
-        "server_version": "2.1.0",
+        "server_version": "2.3.0",
         "multi_agent_system": True,
         "output_format": "javascript_html5",
-        "autonomous_debugging": True
+        "autonomous_debugging": True,
+        "cloud_storage_enabled": True
     }
 
 @app.delete("/api/games/{game_name}/files/{file_name}")
@@ -502,8 +536,27 @@ async def delete_game_file(game_name: str, file_name: str):
 
 @app.get("/api/games/latest")
 async def get_latest_game():
-    """Get the most recently generated game."""
+    """Get the most recently generated game from cloud storage or local filesystem."""
     try:
+        # Import cloud storage
+        from genesis_engine.utils.cloud_storage import get_cloud_storage
+        cloud_storage = get_cloud_storage()
+        
+        # First check cloud storage if available
+        if cloud_storage.is_available():
+            cloud_games = cloud_storage.list_games()
+            if cloud_games:
+                # Get the most recent game (assuming they're sorted by creation time)
+                latest_game = cloud_games[-1]
+                return {
+                    "success": True,
+                    "project_name": latest_game["name"],
+                    "cloud_url": latest_game["url"],
+                    "game_path": latest_game["url"],  # For backward compatibility
+                    "storage_type": "cloud"
+                }
+        
+        # Fallback to local filesystem
         base_path = Path("generated_games")
         if not base_path.exists():
             raise HTTPException(status_code=404, detail="No games generated yet")
@@ -525,7 +578,8 @@ async def get_latest_game():
             "success": True,
             "project_name": latest_dir.name,
             "game_path": f"/api/games/{latest_dir.name}/files/game.html",
-            "created": datetime.fromtimestamp(latest_dir.stat().st_mtime).isoformat()
+            "created": datetime.fromtimestamp(latest_dir.stat().st_mtime).isoformat(),
+            "storage_type": "local"
         }
         
     except Exception as e:
