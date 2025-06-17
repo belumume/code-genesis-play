@@ -28,20 +28,23 @@ class AIClient:
         self.api_key = self._get_api_key()
         self.base_url = "https://api.anthropic.com/v1/messages"
         
-        # Simplified model hierarchy - focus on Claude 4 Sonnet for best cost/performance balance
+        # Optimized model hierarchy for Claude Sonnet 4 primary with robust fallbacks
         self.model_hierarchy = [
-            "claude-sonnet-4-20250514",     # Primary: Claude 4 Sonnet (best balance of capability and cost)
-            "claude-3-5-haiku-20241022"     # Fallback: Claude 3.5 Haiku (fastest, most available)
+            "claude-sonnet-4-20250514",     # Primary: Claude Sonnet 4 (best balance: $3/$15, 64K tokens, high availability)
+            "claude-3-7-sonnet-20250219",   # Fallback 1: Claude Sonnet 3.7 (similar capability, high availability)
+            "claude-3-5-sonnet-20241022",   # Fallback 2: Claude Sonnet 3.5 (proven reliability)
+            "claude-3-5-haiku-20241022"     # Final fallback: Claude 3.5 Haiku (fastest, most available)
         ]
         self.current_model_index = 0
         
-        # Try to use models from config, fallback to defaults
+        # Ensure config model is prioritized in hierarchy
         try:
             from ..config import settings
-            if hasattr(settings, 'anthropic_model'):
-                # If config specifies a model, put it first in hierarchy
-                if settings.anthropic_model not in self.model_hierarchy:
-                    self.model_hierarchy.insert(0, settings.anthropic_model)
+            if hasattr(settings, 'anthropic_model') and settings.anthropic_model:
+                # Move config model to front of hierarchy if not already there
+                if settings.anthropic_model in self.model_hierarchy:
+                    self.model_hierarchy.remove(settings.anthropic_model)
+                self.model_hierarchy.insert(0, settings.anthropic_model)
         except ImportError:
             pass
         
@@ -52,8 +55,8 @@ class AIClient:
             print("⚠️  No Anthropic API key found. Using mock responses for testing.")
         else:
             print("✅ Anthropic API key found. Using real AI integration.")
-            print(f"🎯 Optimized for Claude 4 Sonnet: {' → '.join(self.model_hierarchy)} → Mock")
-            print("🚀 Prioritizing Sonnet 4 for best balance of capability, cost, and availability")
+            print(f"🎯 Robust Claude Sonnet 4 hierarchy: {' → '.join(self.model_hierarchy)} → Mock")
+            print("🚀 Optimized for Claude Sonnet 4 with intelligent fallbacks for maximum reliability")
     
     def _get_api_key(self) -> Optional[str]:
         """Get API key from multiple sources."""
@@ -302,16 +305,22 @@ sys.exit()
             'anthropic-version': '2023-06-01'
         }
         
-        # Adjust parameters based on model capabilities
-        max_tokens = 64000  # Sonnet 4 supports large outputs
+        # Adjust parameters based on model capabilities (accurate token limits)
+        max_tokens = 8192   # Safe default for all models
         temperature = 0.7
         
         if "sonnet-4" in model:
-            max_tokens = 64000  # Sonnet 4 supports much larger outputs
+            max_tokens = 64000  # Claude Sonnet 4: 64K output tokens, $3/$15 per MTok
+            temperature = 0.7   # Balanced creativity for complex tasks
+        elif "3-7-sonnet" in model:
+            max_tokens = 64000  # Claude Sonnet 3.7: 64K output tokens, $3/$15 per MTok  
+            temperature = 0.7   # Balanced creativity
+        elif "3-5-sonnet" in model:
+            max_tokens = 8192   # Claude Sonnet 3.5: 8K output tokens, $3/$15 per MTok
             temperature = 0.7   # Balanced creativity
         elif "haiku" in model:
-            max_tokens = 8192   # Haiku has standard output limits
-            temperature = 0.5   # Lower temperature for consistency on smaller model
+            max_tokens = 8192   # Claude Haiku 3.5: 8K output tokens, $0.80/$4 per MTok
+            temperature = 0.5   # Lower temperature for consistency on faster model
         
         payload = {
             'model': model,

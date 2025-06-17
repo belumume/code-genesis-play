@@ -20,7 +20,7 @@ def main():
     🔌 Port: {os.getenv('PORT', 8000)}
     📡 API docs: /docs
     🎮 Competition: $40,000 AI Showdown
-    🤖 AI Model: Claude 4 Opus with Sonnet fallback
+    🤖 AI Model: Claude Sonnet 4 (optimized for cost/performance)
     """)
     
     # Get port from environment variable (for cloud deployments)

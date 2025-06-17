@@ -194,7 +194,8 @@ async def health_check():
             "real_time_updates": True
         },
         "ai_available": True,
-        "model": "claude-4-opus",
+        "model": "claude-sonnet-4-20250514",
+        "model_hierarchy": ["claude-sonnet-4", "claude-3-7-sonnet", "claude-3-5-sonnet", "claude-haiku-3-5"],
         "timestamp": datetime.now().isoformat()
     }
 

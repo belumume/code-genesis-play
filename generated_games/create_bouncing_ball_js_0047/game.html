@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bounce Sphere - Interactive Physics Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #0a0a1e 0%, #1a1a3a 100%);
+            font-family: 'Arial', sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #gameContainer {
+            border: 2px solid #4a4a6a;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(100, 100, 255, 0.3);
+        }
+        
+        #instructions {
+            margin-top: 20px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 800px;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .control-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌟 Bounce Sphere 🌟</h1>
+    <div id="gameContainer"></div>
+    
+    <div id="instructions">
+        <h3>Game Controls & Modes</h3>
+        <div class="controls">
+            <div class="control-item"><strong>Mouse Move:</strong> Control gravity</div>
+            <div class="control-item"><strong>Click:</strong> Spawn new ball</div>
+            <div class="control-item"><strong>SPACE:</strong> Reset balls</div>
+            <div class="control-item"><strong>R:</strong> Toggle trails</div>
+            <div class="control-item"><strong>G:</strong> Change gravity mode</div>
+            <div class="control-item"><strong>C:</strong> Clear extra balls</div>
+        </div>
+        <p><strong>Challenge Mode:</strong> Keep balls moving for 60 seconds to win!</p>
+        <p><strong>Collector Mode:</strong> Maintain 10 balls for 30 seconds!</p>
+    </div>
+
+    <script>
+        // Game variables
+        let balls = [];
+        let trails = [];
+        let gameState = 'zen'; // 'zen', 'challenge', 'collector'
+        let gameTimer = 0;
+        let score = 0;
+        let showTrails = true;
+        let gravityMode = 'normal'; // 'normal', 'reverse', 'off'
+        let gameWon = false;
+        let gameLost = false;
+        
+        // Game constants
+        const MAX_BALLS = 10;
+        const MIN_BALL_SIZE = 20;
+        const MAX_BALL_SIZE = 60;
+        const GRAVITY_STRENGTH = 0.3;
+        const ENERGY_DECAY = 0.999;
+        const BOUNCE_DAMPING = 0.85;
+        const TRAIL_LENGTH = 30;
+        
+        // Ball class
+        class Ball {
+            constructor(x, y, size = null) {
+                this.pos = createVector(x, y);
+                this.vel = createVector(random(-2, 2), random(-2, 2));
+                this.acc = createVector(0, 0);
+                this.size = size || random(MIN_BALL_SIZE, MAX_BALL_SIZE);
+                this.hue = random(360);
+                this.trail = [];
+                this.glowIntensity = 0;
+            }
+            
+            // Update ball physics
+            update() {
+                // Apply gravity based on mouse position and mode
+                if (gravityMode !== 'off') {
+                    let gravityForce = createVector(mouseX - this.pos.x, mouseY - this.pos.y);
+                    gravityForce.mult(GRAVITY_STRENGTH / 1000);
+                    
+                    if (gravityMode === 'reverse') {
+                        gravityForce.mult(-1);
+                    }
+                    
+                    this.acc.add(gravityForce);
+                }
+                
+                // Update velocity and position
+                this.vel.add(this.acc);
+                this.vel.mult(ENERGY_DECAY); // Energy decay
+                this.pos.add(this.vel);
+                this.acc.mult(0); // Reset acceleration
+                
+                // Update color based on velocity
+                this.hue = (this.vel.mag() * 10) % 360;
+                this.glowIntensity = map(this.vel.mag(), 0, 10, 50, 255);
+                
+                // Add to trail
+                if (showTrails) {
+                    this.trail.push(createVector(this.pos.x, this.pos.y));
+                    if (this.trail.length > TRAIL_LENGTH) {
+                        this.trail.shift();
+                    }
+                }
+                
+                // Boundary collision
+                this.checkBoundaries();
+            }
+            
+            // Check and handle boundary collisions
+            checkBoundaries() {
+                let bounced = false;
+                
+                if (this.pos.x - this.size/2 < 0) {
+                    this.pos.x = this.size/2;
+                    this.vel.x *= -BOUNCE_DAMPING;
+                    bounced = true;
+                }
+                if (this.pos.x + this.size/2 > width) {
+                    this.pos.x = width - this.size/2;
+                    this.vel.x *= -BOUNCE_DAMPING;
+                    bounced = true;
+                }
+                if (this.pos.y - this.size/2 < 0) {
+                    this.pos.y = this.size/2;
+                    this.vel.y *= -BOUNCE_DAMPING;
+                    bounced = true;
+                }
+                if (this.pos.y + this.size/2 > height) {
+                    this.pos.y = height - this.size/2;
+                    this.vel.y *= -BOUNCE_DAMPING;
+                    bounced = true;
+                }
+                
+                // Screen shake effect on hard bounces
+                if (bounced && this.vel.mag() > 3) {
+                    // Add subtle screen shake by slightly offsetting the ball
+                    this.pos.add(createVector(random(-2, 2), random(-2, 2)));
+                }
+            }
+            
+            // Draw the ball and its trail
+            draw() {
+                // Draw trail
+                if (showTrails && this.trail.length > 1) {
+                    for (let i = 0; i < this.trail.length - 1; i++) {
+                        let alpha = map(i, 0, this.trail.length - 1, 0, 255);
+                        colorMode(HSB, 360, 100, 100, 255);
+                        stroke(this.hue, 80, 90, alpha);
+                        strokeWeight(map(i, 0, this.trail.length - 1, 1, 4));
+                        line(this.trail[i].x, this.trail[i].y, 
+                             this.trail[i + 1].x, this.trail[i + 1].y);
+                    }
+                }
+                
+                // Draw glow effect
+                colorMode(HSB, 360, 100, 100, 255);
+                for (let r = this.size + 20; r > this.size; r--) {
+                    let alpha = map(r, this.size, this.size + 20, this.glowIntensity, 0);
+                    fill(this.hue, 60, 100, alpha);
+                    noStroke();
+                    ellipse(this.pos.x, this.pos.y, r);
+                }
+                
+                // Draw main ball
+                fill(this.hue, 80, 100);
+                stroke(this.hue, 100, 100);
+                strokeWeight(2);
+                ellipse(this.pos.x, this.pos.y, this.size);
+                
+                // Draw inner highlight
+                fill(this.hue, 40, 100, 150);
+                noStroke();
+                ellipse(this.pos.x - this.size/6, this.pos.y - this.size/6, this.size/3);
+            }
+            
+            // Check if ball is moving (for game modes)
+            isMoving() {
+                return this.vel.mag() > 0.1;
+            }
+        }
+        
+        // p5.js setup function
+        function setup() {
+            let canvas = createCanvas(1024, 768);
+            canvas.parent('gameContainer');
+            
+            // Create initial ball
+            balls.push(new Ball(width/2, height/2));
+            
+            // Set color mode
+            colorMode(HSB, 360, 100, 100, 255);
+        }
+        
+        // p5.js draw function - main game loop
+        function draw() {
+            // Draw gradient background
+            drawBackground();
+            
+            // Update and draw balls
+            for (let ball of balls) {
+                ball.update();
+                ball.draw();
+            }
+            
+            // Update game logic
+            updateGameLogic();
+            
+            // Draw UI
+            drawUI();
+        }
+        
+        // Draw animated background
+        function drawBackground() {
+            for (let i = 0; i <= height; i += 2) {
+                let inter = map(i, 0, height, 0, 1);
+                let c = lerpColor(color(240, 80, 10), color(260, 90, 5), inter);
+                stroke(c);
+                line(0, i, width, i);
+            }
+            
+            // Add some animated stars
+            for (let i = 0; i < 50; i++) {
+                let x = (frameCount * 0.1 + i * 50) % width;
+                let y = (i * 37) % height;
+                let brightness = (sin(frameCount * 0.05 + i) + 1) * 50;
+                fill(60, 30, brightness);
+                noStroke();
+                ellipse(x, y, 2);
+            }
+        }
+        
+        // Update game logic based on current mode
+        function updateGameLogic() {
+            gameTimer++;
+            
+            // Update score based on active balls
+            let activeBalls = balls.filter(ball => ball.isMoving()).length;
+            score += activeBalls;
+            
+            // Check game mode conditions
+            if (gameState === 'challenge' && !gameWon && !gameLost) {
+                // Challenge: Keep balls moving for 60 seconds
+                if (gameTimer > 60 * 60) { // 60 seconds at 60fps
+                    gameWon = true;
+                } else if (activeBalls === 0) {
+                    gameLost = true;
+                }
+            } else if (gameState === 'collector' && !gameWon && !gameLost) {
+                // Collector: Maintain 10 balls for 30 seconds
+                if (balls.length >= 10 && gameTimer > 30 * 60) { // 30 seconds at 60fps
+                    gameWon = true;
+                } else if (balls.length < 5 && gameTimer > 5 * 60) { // Grace period
+                    gameLost = true;
+                }
+            }
+        }
+        
+        // Draw user interface
+        function drawUI() {
+            colorMode(RGB, 255);
+            
+            // Semi-transparent overlay
+            fill(0, 0, 0, 100);
+            noStroke();
+            rect(10, 10, 300, 120);
+            
+            // Game info text
+            fill(255);
+            textSize(16);
+            textAlign(LEFT);
+            text(`Mode: ${gameState.toUpperCase()}`, 20, 30);
+            text(`Balls: ${balls.length}/${MAX_BALLS}`, 20, 50);
+            text(`Score: ${score}`, 20, 70);
+            text(`Gravity: ${gravityMode}`, 20, 90);
+            text(`Trails: ${showTrails ? 'ON' : 'OFF'}`, 20, 110);
+            
+            // Timer for game modes
+            if (gameState !== 'zen') {
+                let timeLeft = gameState === 'challenge' ? 
+                    max(0, 60 - floor(gameTimer / 60)) : 
+                    max(0, 30 - floor(gameTimer / 60));
+                text(`Time: ${timeLeft}s`, 150, 30);
+            }
+            
+            // Active balls indicator
+            let activeBalls = balls.filter(ball => ball.isMoving()).length;
+            text(`Active: ${activeBalls}`, 150, 50);
+            
+            // Win/Loss messages
+            if (gameWon) {
+                drawMessage("🎉 YOU WIN! 🎉", color(0, 255, 0));
+            } else if (gameLost) {
+                drawMessage("💥 GAME OVER 💥", color(255, 0, 0));
+            }
+            
+            // Mode instructions
+            fill(255, 255, 255, 150);
+            textSize(12);
+            textAlign(RIGHT);
+            text("Press 1-3 to change modes", width - 20, height - 40);
+            text("1: Zen | 2: Challenge | 3: Collector", width - 20, height - 20);
+        }
+        
+        // Draw centered message
+        function drawMessage(msg, col) {
+            fill(0, 0, 0, 150);
+            rect(0, height/2 - 40, width, 80);
+            
+            fill(col);
+            textSize(32);
+            textAlign(CENTER);
+            text(msg, width/2, height/2 + 10);
+        }
+        
+        // Handle mouse clicks - spawn new balls
+        function mousePressed() {
+            if (balls.length < MAX_BALLS) {
+                balls.push(new Ball(mouseX, mouseY));
+            }
+        }
+        
+        // Handle keyboard input
+        function keyPressed() {
+            switch(key.toLowerCase()) {
+                case ' ': // Spacebar - reset balls
+                    resetBalls();
+                    break;
+                case 'r': // Toggle trails
+                    showTrails = !showTrails;
+                    if (!showTrails) {
+                        // Clear all trails
+                        for (let ball of balls) {
+                            ball.trail = [];
+                        }
+                    }
+                    break;
+                case 'g': // Cycle gravity modes
+                    if (gravityMode === 'normal') gravityMode = 'reverse';
+                    else if (gravityMode === 'reverse') gravityMode = 'off';
+                    else gravityMode = 'normal';
+                    break;
+                case 'c': // Clear extra balls
+                    if (balls.length > 1) {
+                        balls = [balls[0]]; // Keep only first ball
+                    }
+                    break;
+                case '1': // Zen mode
+                    setGameMode('zen');
+                    break;
+                case '2': // Challenge mode
+                    setGameMode('challenge');
+                    break;
+                case '3': // Collector mode
+                    setGameMode('collector');
+                    break;
+            }
+        }
+        
+        // Reset all balls to center
+        function resetBalls() {
+            for (let ball of balls) {
+                ball.pos.set(width/2 + random(-50, 50), height/2 + random(-50, 50));
+                ball.vel.set(random(-3, 3), random(-3, 3));
+                ball.trail = [];
+            }
+            
+            // Reset game state
+            gameTimer = 0;
+            gameWon = false;
+            gameLost = false;
+        }
+        
+        // Set game mode
+        function setGameMode(mode) {
+            gameState = mode;
+            gameTimer = 0;
+            score = 0;
+            gameWon = false;
+            gameLost = false;
+            
+            // Mode-specific setup
+            if (mode === 'challenge') {
+                // Start with one ball for challenge
+                balls = [new Ball(width/2, height/2)];
+            } else if (mode === 'collector') {
+                // Start with multiple balls for collector mode
+                balls = [];
+                for (let i = 0; i < 3; i++) {
+                    balls.push(new Ball(
+                        width/2 + random(-100, 100), 
+                        height/2 + random(-100, 100)
+                    ));
+                }
+            }
+        }
+        
+        // Handle window resize
+        function windowResized() {
+            // Keep canvas size fixed for consistent gameplay
+            // but could be made responsive if needed
+        }
+    </script>
+</body>
+</html>

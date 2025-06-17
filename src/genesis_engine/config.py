@@ -74,7 +74,7 @@ settings.test_output_dir.mkdir(parents=True, exist_ok=True)
 # Competition-specific constants
 COMPETITION_NAME = "Lovable AI Showdown"
 COMPETITION_PRIZE = "$10,000"
-MODEL_CATEGORY = "Claude 4 Sonnet"
+MODEL_CATEGORY = "Claude Sonnet 4"
 PROJECT_TAGLINE = "Transform Ideas into Playable Games with AI"
 
 # Game generation phases with weights for progress tracking

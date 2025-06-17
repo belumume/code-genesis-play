@@ -3,7 +3,7 @@
 ## **The World's First Autonomous Multi-Agent Game Generator**
 
 **Category:** Anthropic Claude  
-**Primary Model:** Claude 4 Opus (>90% of prompts)  
+**Primary Model:** Claude Sonnet 4 (>95% of prompts)  
 **Competition Goal:** Grand Prize Winner  
 
 ---

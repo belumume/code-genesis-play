@@ -7,7 +7,7 @@ Complete setup instructions for AI Genesis Engine development and deployment.
 - Python 3.10 or higher
 - Node.js 18 or higher
 - Git
-- Anthropic API key (for Claude 4 Opus)
+- Anthropic API key (for Claude Sonnet 4)
 
 ## 🚀 Quick Start
 
@@ -82,7 +82,7 @@ SERVER_PORT=8000                 # Port for FastAPI server
 CORS_ORIGINS=["http://localhost:5173", "http://localhost:3000"]
 
 # API Configuration
-ANTHROPIC_MODEL=claude-opus-4-20250514  # Claude model to use
+ANTHROPIC_MODEL=claude-sonnet-4-20250514  # Claude model to use
 API_TIMEOUT=60                   # API timeout in seconds
 MAX_RETRIES=3                    # Number of retry attempts
 ```
@@ -161,7 +161,7 @@ Expected response:
 {
   "status": "healthy",
   "ai_available": true,
-  "model": "claude-opus-4-20250514",
+  "model": "claude-sonnet-4-20250514",
   "version": "1.0.0"
 }
 ```
