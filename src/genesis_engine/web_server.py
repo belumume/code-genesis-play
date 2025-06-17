@@ -14,11 +14,13 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from collections import defaultdict
 import time
+import sys
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, HTMLResponse
 from pydantic import BaseModel, validator
+from fastapi.staticfiles import StaticFiles
 
 from .main import GenesisEngine
 from .core.logger import EngineLogger
@@ -27,11 +29,30 @@ from .core.logger import EngineLogger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Add src to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 # FastAPI app initialization
 app = FastAPI(
     title="AI Genesis Engine v2.1 API",
     description="Transform single-sentence prompts into complete, playable JavaScript/HTML5 games using autonomous multi-agent AI",
     version="2.1.0"
+)
+
+# Configure CORS with WebSocket support
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174", 
+        "http://localhost:3000",
+        "https://code-genesis-play.lovable.app",
+        "https://*.lovable.app"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Get allowed origins from environment
@@ -48,15 +69,6 @@ ALLOWED_ORIGINS = [
 custom_frontend = os.getenv("FRONTEND_URL", "").strip()
 if custom_frontend:
     ALLOWED_ORIGINS.append(custom_frontend)
-
-# CORS middleware with specific origins only
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
-)
 
 # Rate limiting implementation
 class RateLimiter:
@@ -470,6 +482,54 @@ async def get_server_status():
         "output_format": "javascript_html5",
         "autonomous_debugging": True
     }
+
+@app.delete("/api/games/{game_name}/files/{file_name}")
+async def delete_game_file(game_name: str, file_name: str):
+    """Delete a specific game file."""
+    try:
+        game_dir = Path("generated_games") / game_name
+        file_path = game_dir / file_name
+        
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        file_path.unlink()
+        return {"message": f"File {file_name} deleted successfully"}
+    except Exception as e:
+        logger.error(f"Failed to delete file: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/games/latest")
+async def get_latest_game():
+    """Get the most recently generated game."""
+    try:
+        base_path = Path("generated_games")
+        if not base_path.exists():
+            raise HTTPException(status_code=404, detail="No games generated yet")
+        
+        # Find the most recent game directory
+        game_dirs = [d for d in base_path.iterdir() if d.is_dir()]
+        if not game_dirs:
+            raise HTTPException(status_code=404, detail="No games found")
+        
+        # Sort by modification time
+        latest_dir = max(game_dirs, key=lambda x: x.stat().st_mtime)
+        
+        # Check if game.html exists
+        game_file = latest_dir / "game.html"
+        if not game_file.exists():
+            raise HTTPException(status_code=404, detail="Game file not found")
+        
+        return {
+            "success": True,
+            "project_name": latest_dir.name,
+            "game_path": f"/api/games/{latest_dir.name}/files/game.html",
+            "created": datetime.fromtimestamp(latest_dir.stat().st_mtime).isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting latest game: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
