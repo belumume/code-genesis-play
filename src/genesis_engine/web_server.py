@@ -444,28 +444,29 @@ async def list_game_files(game_name: str):
         logger.error(f"Failed to list game files: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/games/{game_name}/files/{file_name}")
-async def get_game_file(game_name: str, file_name: str):
-    """Get the contents of a specific game file."""
+@app.get("/api/games/{game_name}/files/{filename}")
+async def get_game_file(game_name: str, filename: str):
+    """Get a specific file from a generated game."""
     try:
-        game_dir = Path("generated_games") / game_name
-        file_path = game_dir / file_name
+        # First try generated_games directory
+        file_path = Path("generated_games") / game_name / filename
         
+        # If not found, check for demo games in the repository
         if not file_path.exists():
-            raise HTTPException(status_code=404, detail="File not found")
+            file_path = Path("generated_games") / "demo_space_shooter" / filename
+            if not file_path.exists():
+                raise HTTPException(status_code=404, detail="File not found")
         
-        # Determine content type
-        if file_name.endswith('.html'):
-            media_type = "text/html"
-        elif file_name.endswith('.md'):
-            media_type = "text/markdown"
-        elif file_name.endswith('.js'):
-            media_type = "application/javascript"
+        # Handle both JSON and HTML files
+        if filename.endswith('.json'):
+            content = json.loads(file_path.read_text())
+            return JSONResponse(content=content)
+        elif filename.endswith('.html'):
+            content = file_path.read_text()
+            return Response(content=content, media_type="text/html")
         else:
-            media_type = "text/plain"
-        
-        content = file_path.read_text(encoding='utf-8')
-        return PlainTextResponse(content=content, media_type=media_type)
+            content = file_path.read_text()
+            return PlainTextResponse(content=content)
         
     except Exception as e:
         logger.error(f"Failed to get file: {str(e)}")
