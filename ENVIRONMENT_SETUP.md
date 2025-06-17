@@ -273,7 +273,7 @@ Check logs for:
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Anthropic API Reference](https://docs.anthropic.com/)
 - [Project README](README.md)
-- [Competition Guide](COMPETITION_GUIDE.md)
+- [Deployment Guide](DEPLOYMENT_GUIDE.md)
 
 ## 💡 Tips
 

@@ -220,7 +220,7 @@ async def main():
         print(f"Game Generation: {'✅ PASS' if game_success else '❌ FAIL'}")
         
         if sentry_success and game_success:
-            print("\n🎉 All tests passed! Your system is ready for competition!")
+            print("\n🎉 All tests passed! Your system is ready for production!")
         elif sentry_success:
             print("\n⚠️  Sentry working, but game generation needs API key")
         else:

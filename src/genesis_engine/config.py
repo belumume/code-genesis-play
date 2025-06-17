@@ -71,11 +71,11 @@ settings = Settings()
 settings.output_dir.mkdir(parents=True, exist_ok=True)
 settings.test_output_dir.mkdir(parents=True, exist_ok=True)
 
-# Competition-specific constants
-COMPETITION_NAME = "Lovable AI Showdown"
-COMPETITION_PRIZE = "$10,000"
-MODEL_CATEGORY = "Claude Sonnet 4"
-PROJECT_TAGLINE = "Transform Ideas into Playable Games with AI"
+# Project constants
+PROJECT_NAME = "AI Genesis Engine"
+PROJECT_VERSION = "2.3.0"
+AI_MODEL = "Claude Sonnet 4"
+PROJECT_TAGLINE = "Transform Ideas into Playable Games with Autonomous AI"
 
 # Game generation phases with weights for progress tracking
 GENERATION_PHASES = {
@@ -87,12 +87,14 @@ GENERATION_PHASES = {
     "complete": {"weight": 5, "description": "Finalizing project"}
 }
 
-# Showcase features for competition
-SHOWCASE_FEATURES = [
-    "Single prompt to complete game",
+# Key technical features
+TECHNICAL_FEATURES = [
+    "Multi-agent autonomous system",
+    "Self-correcting generation loop",
+    "Cloud storage integration",
     "Real-time progress tracking",
-    "Professional code generation",
-    "Instant playability",
+    "Production-ready code generation",
+    "Browser-based game deployment",
     "Claude 4 Sonnet powered",
-    "Autonomous game design"
+    "Comprehensive error handling"
 ]

@@ -1,100 +1,188 @@
-# AI Genesis Engine - Deployment Guide
+# AI Genesis Engine - Production Deployment Guide
 
-## 🚀 Quick Deployment Steps
+**Deploy your AI Genesis Engine to production platforms for maximum availability and performance.**
 
-### 1. Backend Deployment (Render.com)
+---
 
-**Deploy the backend first as the frontend needs the API URL.**
+## 🎯 Deployment Overview
 
-#### Option A: One-Click Deploy
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+This guide covers deploying the AI Genesis Engine as a production-ready application:
 
-#### Option B: Manual Deploy
-1. Go to [Render Dashboard](https://dashboard.render.com/)
-2. Click "New +" → "Web Service"
-3. Connect your GitHub repository
-4. Configure:
-   - **Name:** ai-genesis-engine
-   - **Runtime:** Python
-   - **Build Command:** `chmod +x deploy_render.sh && ./deploy_render.sh`
-   - **Start Command:** `python -m src.genesis_engine.run_server_prod`
-5. Add Environment Variables:
-   - `ANTHROPIC_API_KEY`: Your Anthropic API key
-   - `FRONTEND_URL`: https://code-genesis-play.lovable.app
-   - `PLAYWRIGHT_BROWSERS_PATH`: /opt/render/project/.cache/ms-playwright
+- **Frontend**: React/TypeScript app on Lovable
+- **Backend**: Python/FastAPI server on Render
+- **Storage**: Cloud storage (AWS S3 or Cloudflare R2)
+- **AI**: Claude 4 Sonnet via Anthropic API
 
-### 2. Frontend Deployment (Lovable)
+---
 
-**Deploy to Lovable platform for the competition.**
+## 🚀 Backend Deployment (Render)
 
-#### Steps:
-1. Open [Lovable.app](https://lovable.app)
-2. Create new project or open existing
-3. Import this repository
-4. Set environment variables in Lovable:
-   ```
-   VITE_API_BASE_URL=https://ai-genesis-engine.onrender.com/api
-   VITE_WS_BASE_URL=wss://ai-genesis-engine.onrender.com
-   ```
-5. Deploy the application
+### Step 1: Prepare Repository
 
-### 3. Verify Deployment
+Ensure your repository has these files:
+- `requirements.txt` - Python dependencies
+- `run_server_prod.py` - Production server script
+- `render.yaml` - Render configuration
 
-#### Backend Health Check:
-```bash
-curl https://ai-genesis-engine.onrender.com/api/health
+### Step 2: Deploy to Render
+
+1. **Sign up** at [render.com](https://render.com)
+2. **Connect GitHub** repository
+3. **Create Web Service**:
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `python run_server_prod.py`
+   - Environment: Python 3
+
+### Step 3: Configure Environment Variables
+
+Add these in Render dashboard:
+```
+ANTHROPIC_API_KEY=your_anthropic_api_key
+ANTHROPIC_MODEL=claude-sonnet-4-20250514
+FRONTEND_URL=https://your-app.lovable.app
+CLOUD_ACCESS_KEY_ID=your_cloud_access_key
+CLOUD_SECRET_ACCESS_KEY=your_cloud_secret_key
+CLOUD_BUCKET_NAME=ai-genesis-games
+CLOUD_ENDPOINT_URL=https://your-cloud-endpoint.com
 ```
 
-Expected response:
-```json
-{
-  "status": "healthy",
-  "version": "2.1.0",
-  "features": {
-    "multi_agent_system": true,
-    "javascript_output": true,
-    "autonomous_debugging": true,
-    "real_time_updates": true
-  }
-}
+### Step 4: Verify Deployment
+
+Test these endpoints:
+- Health check: `https://your-app.onrender.com/api/health`
+- API docs: `https://your-app.onrender.com/docs`
+- WebSocket: `wss://your-app.onrender.com/ws/generate`
+
+---
+
+## 🎨 Frontend Deployment (Lovable)
+
+### Step 1: Configure Environment
+
+In Lovable project settings, add:
+```
+VITE_API_BASE_URL=https://your-app.onrender.com
+VITE_WS_BASE_URL=wss://your-app.onrender.com
 ```
 
-#### Frontend Check:
-1. Visit: https://code-genesis-play.lovable.app
-2. Test game generation with: "Create a simple pong game"
-3. Verify WebSocket real-time updates work
+### Step 2: Deploy Frontend
 
-## 📋 Pre-Deployment Checklist
+1. **Push to main branch** - Lovable auto-deploys
+2. **Verify build** in Lovable dashboard
+3. **Test live URL**: `https://your-app.lovable.app`
 
-- [ ] Anthropic API key ready
-- [ ] Backend deployed and accessible
-- [ ] Frontend environment variables configured
-- [ ] CORS origins updated in backend
-- [ ] Test game generation works
+---
 
-## 🔧 Troubleshooting
+## ☁️ Cloud Storage Setup
 
-### Backend Issues:
-- **"No API key"**: Add ANTHROPIC_API_KEY in Render environment
-- **"CORS error"**: Check FRONTEND_URL is set correctly
-- **"502 Bad Gateway"**: Wait 2-3 minutes for cold start
+### Option 1: Cloudflare R2 (Recommended)
 
-### Frontend Issues:
-- **"Cannot connect to API"**: Verify VITE_API_BASE_URL is correct
-- **"WebSocket failed"**: Check VITE_WS_BASE_URL uses wss:// protocol
-- **"Game won't play"**: Ensure browser allows iframe execution
+1. **Create R2 bucket** at cloudflare.com
+2. **Generate API tokens** with R2 permissions
+3. **Configure CORS** for browser access
+4. **Set environment variables** in Render
 
-## 🎯 Competition Submission URLs
+### Option 2: AWS S3
 
-Once deployed, your submission URLs will be:
-- **Live Demo:** https://code-genesis-play.lovable.app
-- **API Docs:** https://ai-genesis-engine.onrender.com/docs
-- **Backend Health:** https://ai-genesis-engine.onrender.com/api/health
+1. **Create S3 bucket** in AWS Console
+2. **Create IAM user** with S3 permissions
+3. **Configure bucket policy** for public read
+4. **Set AWS credentials** in Render
 
-## ⏱️ Estimated Deployment Time
+---
 
-- Backend on Render: 5-10 minutes (first deploy)
-- Frontend on Lovable: 2-3 minutes
-- Total: ~15 minutes
+## 🧪 Production Testing
 
-Good luck with the competition! 🏆 
+### End-to-End Testing
+
+1. **Open frontend URL**
+2. **Sign in** with authentication
+3. **Generate test game**: "A simple space shooter"
+4. **Verify progression**:
+   - Architect creates design
+   - Engineer writes code
+   - Sentry tests automatically
+   - Debugger fixes issues
+   - Game uploads to cloud
+5. **Play generated game** in browser
+
+### Performance Testing
+
+- **Generation time**: Should be 3-5 minutes
+- **WebSocket latency**: <100ms for real-time updates
+- **Game loading**: Instant from cloud URLs
+- **Browser compatibility**: All modern browsers
+
+---
+
+## 🔧 Production Configuration
+
+### Security Settings
+
+- API keys stored securely in environment variables
+- CORS configured for specific origins
+- Rate limiting enabled (10 requests/hour)
+- Input validation on all endpoints
+
+### Performance Optimization
+
+- Async FastAPI server for concurrent requests
+- Cloud storage for permanent game hosting
+- WebSocket with polling fallback
+- Efficient retry logic with exponential backoff
+
+### Monitoring
+
+- Health check endpoint for uptime monitoring
+- Comprehensive error logging
+- Real-time progress tracking
+- Session-based generation management
+
+---
+
+## 📊 Production Architecture
+
+```
+User Request
+     │
+     ▼
+Frontend (Lovable)
+     │
+     ▼
+Backend (Render)
+     │
+     ▼
+Multi-Agent System
+     │
+     ▼
+Cloud Storage (R2/S3)
+     │
+     ▼
+Permanent Game URL
+```
+
+---
+
+## 🎯 Success Criteria
+
+Your deployment is successful when:
+
+- [ ] Frontend loads without errors
+- [ ] Authentication system works
+- [ ] Real-time WebSocket updates function
+- [ ] Games generate successfully (100% success rate)
+- [ ] Generated games upload to cloud storage
+- [ ] Games are playable from permanent URLs
+- [ ] All error scenarios handled gracefully
+
+---
+
+## 🚀 Production Features
+
+1. **Multi-Agent Collaboration**: Autonomous AI agents working together
+2. **Self-Correcting System**: Automatic testing and debugging
+3. **Cloud Persistence**: Games stored permanently with public URLs
+4. **Real-time Updates**: Live progress tracking during generation
+5. **Production Architecture**: Scalable and reliable infrastructure
+
+Your AI Genesis Engine is now ready for production use! 🎮 

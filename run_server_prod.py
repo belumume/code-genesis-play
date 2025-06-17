@@ -19,7 +19,7 @@ def main():
     🌐 Host: 0.0.0.0
     🔌 Port: {os.getenv('PORT', 8000)}
     📡 API docs: /docs
-    🎮 Competition: $40,000 AI Showdown
+    🎮 Portfolio Project: Production-Ready AI System
     🤖 AI Model: Claude Sonnet 4 (optimized for cost/performance)
     """)
     

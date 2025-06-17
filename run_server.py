@@ -17,7 +17,7 @@ def main():
     
     🚀 Starting server on http://localhost:8000
     📡 API docs available at http://localhost:8000/docs
-    🎮 Competition: $40,000 AI Showdown
+    🎮 Portfolio Project: Production-Ready AI System
     🤖 AI Model: Claude Sonnet 4 (optimized for cost/performance)
     """)
     
