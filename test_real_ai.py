@@ -52,7 +52,7 @@ def test_real_ai():
     test_prompt = "A simple space shooter where you fly a ship and shoot asteroids"
     
     logger.info(f"Testing with prompt: '{test_prompt}'")
-    logger.info("Calling real Claude 4 Opus API...")
+    logger.info("Calling real Claude 4 Sonnet API...")
     
     try:
         # Test GDD generation

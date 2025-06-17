@@ -34,13 +34,13 @@
 4. **Final Fallback**: `claude-3-5-haiku-20241022` ($0.80/$4 per MTok, 8K tokens, fastest/most available)
 
 **💰 Budget Impact:**
-- **5x cost reduction**: $15→$3 input, $75→$15 output vs Claude Opus 4
-- **Higher availability**: Sonnet 4 has lower demand than Opus 4
+- **5x cost reduction**: $15→$3 input, $75→$15 output vs Claude Sonnet 4
+- **Higher availability**: Sonnet 4 has lower demand than Sonnet 4
 - **Same quality**: Professional game generation maintained
 - **Intelligent fallbacks**: Never fails due to model unavailability
 
 **🔧 Technical Fixes Applied:**
-- ✅ Removed Claude Opus 4 from hierarchy (was causing token limit errors)
+- ✅ Removed Claude Sonnet 4 from hierarchy (was causing token limit errors)
 - ✅ Fixed token limits: Sonnet 4 (64K), 3.7 Sonnet (64K), 3.5 Sonnet (8K), Haiku (8K)
 - ✅ Updated environment variable: `ANTHROPIC_MODEL=claude-sonnet-4-20250514`
 - ✅ Enhanced fallback logic for maximum reliability
@@ -84,7 +84,7 @@
 - **Primary**: `claude-sonnet-4-20250514` - 64K output tokens, enhanced reasoning, $3/$15
 - **Fallback Strategy**: 4-tier intelligent hierarchy for maximum reliability
 - **Performance**: Maintained professional game quality with 5x cost reduction
-- **Availability**: Higher availability than Claude Opus 4 due to lower demand
+- **Availability**: Higher availability than Claude Sonnet 4 due to lower demand
 
 **Recent Test Results from E2E Test:**
 - **Generated Game**: Complete HTML5/JavaScript with p5.js ✅
@@ -129,7 +129,7 @@
 
 ```bash
 # Update this line in your .env file:
-ANTHROPIC_MODEL=claude-opus-4-20250514
+ANTHROPIC_MODEL=claude-Sonnet-4-20250514
 # To:     ANTHROPIC_MODEL=claude-sonnet-4-20250514
 ```
 
@@ -159,7 +159,7 @@ ANTHROPIC_MODEL=claude-opus-4-20250514
 
 ```bash
 # 1. CRITICAL: Update your .env file permanently
-# Change: ANTHROPIC_MODEL=claude-opus-4-20250514
+# Change: ANTHROPIC_MODEL=claude-Sonnet-4-20250514
 # To:     ANTHROPIC_MODEL=claude-sonnet-4-20250514
 
 # 2. Restart production server (if needed)

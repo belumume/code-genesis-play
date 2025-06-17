@@ -58,11 +58,11 @@
 **Visual:** Architecture diagram + code snippets  
 **Key points:**
 - Show 4-agent architecture
-- Highlight Claude 4 Opus usage
+- Highlight Claude 4 Sonnet usage
 - Show autonomous error correction
 
 **Narration:**
-> "We're using Claude 4 Opus to power four specialized agents. Each has a specific role 
+> "We're using Claude 4 Sonnet to power four specialized agents. Each has a specific role 
 > and custom prompts. The breakthrough is our autonomous debugging loop - the AI doesn't 
 > just generate code, it ensures it works. This is the future of AI development."
 
@@ -102,7 +102,7 @@
 1. **Multi-agent collaboration** is the innovation
 2. **Autonomous debugging** sets us apart  
 3. **Real playable games** not just code snippets
-4. **Claude 4 Opus** powering specialized agents
+4. **Claude 4 Sonnet** powering specialized agents
 5. **No human intervention** needed
 
 Remember: The judges want to see AI pushed to its limits. Focus on the autonomous collaboration and self-correction aspects! 

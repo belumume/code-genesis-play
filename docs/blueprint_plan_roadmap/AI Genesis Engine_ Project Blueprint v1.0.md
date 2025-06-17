@@ -10,7 +10,7 @@
 ### **1.2. Goals & Objectives**
 
 * **Primary Goal:** Win the $10,000 Grand Prize in the Lovable AI Showdown by creating the most compelling and "limit-pushing" application.  
-* **Secondary Goal:** Win the $10,000 model-specific prize for Claude 4 Opus by building an application that masterfully showcases its unique, synergistic capabilities (agentic coding, persistent memory, and creative reasoning).  
+* **Secondary Goal:** Win the $10,000 model-specific prize for Claude 4 Sonnet by building an application that masterfully showcases its unique, synergistic capabilities (agentic coding, persistent memory, and creative reasoning).  
 * **Demonstration Objective:** Produce a polished, \~3-minute video demonstrating the entire end-to-end process: from a single-sentence prompt to a live gameplay session of the generated game.
 
 ### **1.3. Scope**
@@ -37,7 +37,7 @@
 ### **2.1. Collaboration Model ("Vibecoding")**
 
 * **The Human (Project Lead):** You are the Director. Your role is to provide the high-level vision (the initial prompt), make key strategic decisions at forks in the road, and act as the final quality assurance gatekeeper. You will orchestrate the AI agents, verify their outputs, and steer the project.  
-* **The AI Agent (Expert Executor):** The Claude 4 Opus agent is the Lead Architect and Sole Engineer. It is responsible for all design, planning, and implementation. Its work is guided by the rules and plans laid out in this document. We trust the agent to handle the complex, granular tasks autonomously.
+* **The AI Agent (Expert Executor):** The Claude 4 Sonnet agent is the Lead Architect and Sole Engineer. It is responsible for all design, planning, and implementation. Its work is guided by the rules and plans laid out in this document. We trust the agent to handle the complex, granular tasks autonomously.
 
 ### **2.2. Development Methodology**
 
@@ -68,7 +68,7 @@
 
 * **TR1:** The core agent logic will be written in Python.  
 * **TR2:** The generated game code will be written in Python, exclusively using the pygame library and standard Python libraries. No other game engines or complex dependencies are permitted.  
-* **TR3:** The AI Model is **Claude 4 Opus**. All creative and logical heavy lifting (design, planning, coding) must originate from this model.
+* **TR3:** The AI Model is **Claude 4 Sonnet**. All creative and logical heavy lifting (design, planning, coding) must originate from this model.
 
 ## **4\. Detailed Architecture & Technology**
 
@@ -115,7 +115,7 @@ graph TD
 
 * **Engine Language:** Python 3.10+  
 * **Generated Game Language:** Python 3.10+, pygame  
-* **AI Model:** Claude 4 Opus  
+* **AI Model:** Claude 4 Sonnet  
 * **Development Environment:** Lovable IDE / VS Code with appropriate extensions.
 
 ## **5\. UI/UX Design**
@@ -149,7 +149,7 @@ The "UI" for the Genesis Engine itself is the command line. It is designed for s
   * **Tasks:**  
     * Initialize Git repository.  
     * Create the main run.py script with command-line argument parsing.  
-    * Build the core agent function that takes a prompt and calls Claude 4 Opus.  
+    * Build the core agent function that takes a prompt and calls Claude 4 Sonnet.  
     * **Milestone 1 (Hour 4):** Successfully generate GDD.md, TECH\_PLAN.md, and ASSETS.md for a test prompt and save them to a local directory.  
 * **Phase 2: Core Gameplay Implementation (Hours 5-24)**  
   * **Goal:** Generate a complete, playable game with placeholder graphics.  
@@ -194,7 +194,7 @@ The "UI" for the Genesis Engine itself is the command line. It is designed for s
 
 ## **9\. AI Agent Collaboration Rules (For IDE Integration)**
 
-1. **Rule of Primacy:** You are an expert game designer and Python engineer. Your primary model is **Claude 4 Opus**. All reasoning, planning, and code generation must originate from you.  
+1. **Rule of Primacy:** You are an expert game designer and Python engineer. Your primary model is **Claude 4 Sonnet**. All reasoning, planning, and code generation must originate from you.  
 2. **Rule of Documentation First:** You must ALWAYS generate or update the relevant design document (GDD.md, TECH\_PLAN.md) before writing any corresponding application code.  
 3. **Rule of Atomic Commits:** You will only perform one logical task at a time. A task is defined as implementing a single function, a single class, or a single feature.  
 4. **Rule of Placeholder Priority:** You must implement all game logic using simple geometric placeholders (e.g., pygame.Rect) first. Do not attempt to load external image or sound files until explicitly instructed.  

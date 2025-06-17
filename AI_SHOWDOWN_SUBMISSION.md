@@ -107,12 +107,12 @@ class MultiAgentOrchestrator:
 
 ### **Backend (Python/FastAPI):**
 - Asynchronous multi-agent orchestration
-- Claude 4 Opus integration with intelligent fallbacks
+- Claude 4 Sonnet integration with intelligent fallbacks
 - Real-time progress streaming via WebSocket
 - Production-ready deployment on Render.com
 
 ### **AI Integration:**
-- **Primary Model:** Claude 4 Opus for complex reasoning
+- **Primary Model:** Claude 4 Sonnet for complex reasoning
 - **Fallback Models:** Claude 4 Sonnet → Claude 3.7 Sonnet → Haiku
 - **Model Selection:** Intelligent routing based on task complexity
 - **Error Handling:** Graceful degradation with retry logic
@@ -184,4 +184,4 @@ The **AI Genesis Engine v2.1** represents a breakthrough in autonomous AI collab
 
 ---
 
-*Built with Claude 4 Opus • Deployed on Lovable • Ready to win the $40K Grand Prize* 
+*Built with Claude 4 Sonnet • Deployed on Lovable • Ready to win the $40K Grand Prize* 

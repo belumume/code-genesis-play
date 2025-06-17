@@ -95,19 +95,19 @@ These prompts are designed to showcase the AI's creative capabilities while ensu
 - **"A physics puzzle where you build bridges to help robots cross dangerous gaps"**
   - Shows: Physics engine capabilities
   - Code complexity: High
-  - Claude 4 Opus strength: Problem-solving
+  - Claude 4 Sonnet strength: Problem-solving
 
 ### Creative Showcase Prompts:
 - **"A rhythm game where you paint the sky with fireworks synchronized to music beats"**
   - Shows: Creative interpretation
   - Unique mechanics: High
-  - Claude 4 Opus strength: Creative reasoning
+  - Claude 4 Sonnet strength: Creative reasoning
 
 ### Polish Showcase Prompts:
 - **"A stealth game where you're a ninja cat sneaking through a guard-filled palace"**
   - Shows: AI behavior, level design
   - Polish potential: High
-  - Claude 4 Opus strength: Complete game systems
+  - Claude 4 Sonnet strength: Complete game systems
 
 ## 📝 Emergency Backup Prompts
 

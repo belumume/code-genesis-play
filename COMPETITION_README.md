@@ -3,7 +3,7 @@
 <div align="center">
 
 [![AI Showdown](https://img.shields.io/badge/$40%2C000-AI%20Showdown-purple?style=for-the-badge)](https://aishowdown.lovable.app/)
-[![Claude 4 Opus](https://img.shields.io/badge/Powered%20by-Claude%204%20Opus-blue?style=for-the-badge)](https://anthropic.com)
+[![Claude 4 Sonnet](https://img.shields.io/badge/Powered%20by-Claude%204%20Sonnet-blue?style=for-the-badge)](https://anthropic.com)
 [![Live Demo](https://img.shields.io/badge/Live-Demo-green?style=for-the-badge)](https://your-app.lovable.app)
 
 **One sentence. Infinite possibilities. Real games.**
@@ -25,7 +25,7 @@ Not just code snippets or templates - the AI designs, architects, and implements
 - Professional error handling and fallback systems
 - Deployed and accessible to judges
 
-### 3. **Claude 4 Opus Showcase**
+### 3. **Claude 4 Sonnet Showcase**
 Leverages Claude's unique strengths:
 - **Creative Reasoning**: Interprets vague prompts into complete game designs
 - **Code Generation**: Produces 500+ lines of clean, working Python/Pygame code
@@ -111,7 +111,7 @@ graph LR
     A[React Frontend] -->|REST API| B[FastAPI Backend]
     A -->|WebSocket| B
     B --> C[Genesis Engine]
-    C --> D[Claude 4 Opus]
+    C --> D[Claude 4 Sonnet]
     C --> E[Game Output]
     
     style A fill:#61dafb
@@ -122,7 +122,7 @@ graph LR
 ### Tech Stack
 - **Frontend**: React 18, TypeScript, Tailwind CSS, Vite
 - **Backend**: Python 3.10+, FastAPI, WebSockets
-- **AI**: Claude 4 Opus (primary), Sonnet 3.5 (fallback)
+- **AI**: Claude 4 Sonnet (primary), Sonnet 3.5 (fallback)
 - **Auth**: Supabase
 - **Deployment**: Render (backend), Lovable (frontend)
 
@@ -200,7 +200,7 @@ With AI Genesis Engine as a foundation, imagine:
 
 ## 🙏 Acknowledgments
 
-- **Anthropic** for Claude 4 Opus and this amazing competition
+- **Anthropic** for Claude 4 Sonnet and this amazing competition
 - **Lovable** for the incredible development platform
 - **The AI community** for pushing boundaries
 

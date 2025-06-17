@@ -114,7 +114,7 @@
 - [ ] Write compelling description emphasizing:
   - Multi-agent collaboration
   - Autonomous debugging
-  - Claude 4 Opus usage
+  - Claude 4 Sonnet usage
   - Real playable games
 - [ ] Submit before 9AM CET
 
@@ -130,7 +130,7 @@
 2. **Autonomous Self-Correction** - AI that debugs its own code
 3. **Professional Quality Games** - Not templates, real generated games
 4. **Live Demo Available** - Judges can try it themselves
-5. **Pure Claude 4 Opus** - Showcasing the model's capabilities
+5. **Pure Claude 4 Sonnet** - Showcasing the model's capabilities
 
 ## ⚡ QUICK COMMANDS
 

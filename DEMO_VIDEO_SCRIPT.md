@@ -12,7 +12,7 @@
 
 **[Visual: Text appears: "AI Genesis Engine - Where Ideas Become Games"]**
 
-**Narrator**: "Welcome to the AI Genesis Engine - a groundbreaking application that transforms your imagination into playable reality, powered by Claude 4 Opus."
+**Narrator**: "Welcome to the AI Genesis Engine - a groundbreaking application that transforms your imagination into playable reality, powered by Claude 4 Sonnet."
 
 ---
 
@@ -24,7 +24,7 @@
 
 **[Visual: Architecture diagram briefly showing React + FastAPI + Claude]**
 
-**Narrator**: "Combining a modern React interface, real-time WebSocket streaming, and the creative power of Claude 4 Opus - this is the future of game development."
+**Narrator**: "Combining a modern React interface, real-time WebSocket streaming, and the creative power of Claude 4 Sonnet - this is the future of game development."
 
 ---
 
@@ -103,7 +103,7 @@ python main.py
 **Narrator**: "Behind the scenes, AI Genesis Engine showcases:"
 
 **[Visual: Code snippets and architecture highlights]**
-- "Claude 4 Opus for unmatched creative reasoning"
+- "Claude 4 Sonnet for unmatched creative reasoning"
 - "Intelligent fallback system ensuring reliability"
 - "WebSocket streaming for engaging user experience"
 - "Production-ready with authentication and error handling"
@@ -125,7 +125,7 @@ python main.py
 **Text on screen**: 
 - "AI Genesis Engine"
 - "Transform Ideas into Games"
-- "Built with Claude 4 Opus"
+- "Built with Claude 4 Sonnet"
 - "$40,000 AI Showdown"
 
 **Narrator**: "The future of game development isn't about replacing creativity - it's about amplifying it. Welcome to the AI Genesis Engine."
@@ -139,7 +139,7 @@ python main.py
 1. **Single prompt → Complete game** (not just code snippets)
 2. **Real-time progress** (engaging user experience)
 3. **Professional quality** (well-architected, playable games)
-4. **Claude 4 Opus showcase** (creative reasoning, code generation)
+4. **Claude 4 Sonnet showcase** (creative reasoning, code generation)
 5. **Human-AI collaboration** (AI as partner, not replacement)
 
 ## 🎬 Recording Tips

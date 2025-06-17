@@ -54,7 +54,7 @@
 5. **Transparent Process** - Watch AI agents think and collaborate
 
 ### **Competition Advantages:**
-- **100% Claude 4 Opus** - Leveraging the most powerful model
+- **100% Claude 4 Sonnet** - Leveraging the most powerful model
 - **Production Deployed** - Not a prototype, a real system
 - **Instant Results** - Games ready in seconds, not minutes
 - **Zero Manual Intervention** - True autonomy

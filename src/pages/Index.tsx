@@ -62,7 +62,7 @@ const Index = () => {
           {/* Footer */}
           <div className="text-center mt-16 pt-8 border-t border-slate-800">
             <p className="text-slate-500 text-sm">
-              Built for the $40,000 AI Showdown • Powered by Claude 4 Opus • 
+              Built for the $40,000 AI Showdown • Powered by Claude 4 Sonnet • 
               <span className="text-purple-400 ml-1">Human-AI Creative Collaboration</span>
             </p>
           </div>
@@ -108,7 +108,7 @@ const Index = () => {
         {/* Footer */}
         <div className="text-center mt-16 pt-8 border-t border-slate-800">
           <p className="text-slate-500 text-sm">
-            Built for the $40,000 AI Showdown • Powered by Claude 4 Opus • 
+            Built for the $40,000 AI Showdown • Powered by Claude 4 Sonnet • 
             <span className="text-purple-400 ml-1">Human-AI Creative Collaboration</span>
           </p>
         </div>

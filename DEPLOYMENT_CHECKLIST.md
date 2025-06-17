@@ -63,7 +63,7 @@
   
 - [ ] Technical Highlights (30 seconds)
   - Architecture overview
-  - AI integration (Claude 4 Opus)
+  - AI integration (Claude 4 Sonnet)
   - Real-time WebSocket updates
   - Code quality demonstration
 
@@ -122,4 +122,4 @@
 2. **Technical Excellence** - Clean, professional implementation
 3. **User Experience** - Seamless, engaging interface
 4. **Real Value** - Actual playable games from simple prompts
-5. **Claude 4 Opus Showcase** - Leveraging model's unique capabilities 
+5. **Claude 4 Sonnet Showcase** - Leveraging model's unique capabilities 

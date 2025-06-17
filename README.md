@@ -19,7 +19,7 @@
 4. **Download & play** - Download the game files and run locally with `python main.py` (requires Python + pygame)
 
 ### 🏆 Built for the Lovable AI Showdown
-This project showcases the power of Claude 4 Opus in autonomous software creation, demonstrating how AI can be a true creative partner in game development.
+This project showcases the power of Claude 4 Sonnet in autonomous software creation, demonstrating how AI can be a true creative partner in game development.
 
 ---
 
@@ -59,7 +59,7 @@ Your AI Genesis Engine now runs with REAL AI generation, not mocks!
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10+-green.svg)
-![Claude](https://img.shields.io/badge/Claude-4%20Opus-purple.svg)
+![Claude](https://img.shields.io/badge/Claude-4%20Sonnet-purple.svg)
 ![Competition](https://img.shields.io/badge/Lovable%20AI%20Showdown-$10k-gold.svg)
 
 **Transform single-sentence prompts into complete, playable 2D games using Claude AI**
@@ -72,7 +72,7 @@ Your AI Genesis Engine now runs with REAL AI generation, not mocks!
 
 ## 🚀 Overview
 
-AI Genesis Engine is a groundbreaking application that demonstrates the power of human-AI creative collaboration. By leveraging Claude 4 Opus's advanced capabilities, it transforms simple text prompts into fully functional, playable 2D games - complete with game design documents, technical architecture, and production-ready code.
+AI Genesis Engine is a groundbreaking application that demonstrates the power of human-AI creative collaboration. By leveraging Claude 4 Sonnet's advanced capabilities, it transforms simple text prompts into fully functional, playable 2D games - complete with game design documents, technical architecture, and production-ready code.
 
 ### 🎯 Key Innovation
 
@@ -85,7 +85,7 @@ AI Genesis Engine is a groundbreaking application that demonstrates the power of
 ## ✨ Features
 
 ### Core Capabilities
-- 🤖 **Claude 4 Opus Integration**: Harnesses the latest AI model for creative game generation
+- 🤖 **Claude 4 Sonnet Integration**: Harnesses the latest AI model for creative game generation
 - 📝 **Complete Documentation**: Generates Game Design Documents, Technical Plans, and Asset Specifications
 - 🎮 **Playable Games**: Outputs fully functional Python/Pygame games
 - 🔄 **Real-time Updates**: WebSocket-powered progress tracking
@@ -103,7 +103,7 @@ AI Genesis Engine is a groundbreaking application that demonstrates the power of
 ### Prerequisites
 - Python 3.10+ 
 - Node.js 18+
-- Anthropic API key (for Claude 4 Opus)
+- Anthropic API key (for Claude 4 Sonnet)
 
 ### Installation
 
@@ -166,7 +166,7 @@ python -m src.genesis_engine "Your game idea here"
 ### System Overview
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  React Frontend │────▶│  FastAPI Server │────▶│  Claude 3 Opus  │
+│  React Frontend │────▶│  FastAPI Server │────▶│  Claude 3 Sonnet  │
 │   (TypeScript)  │◀────│    (Python)     │◀────│      API        │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
          │                       │
@@ -191,7 +191,7 @@ python -m src.genesis_engine "Your game idea here"
 - **Async Processing**: Non-blocking game generation
 - **Session Management**: Track multiple generations simultaneously
 
-#### AI Integration (Claude 4 Opus)
+#### AI Integration (Claude 4 Sonnet)
 - **Smart Prompting**: Optimized prompts for each generation phase
 - **Code Validation**: Syntax checking and cleaning
 - **Retry Logic**: Exponential backoff for reliability
@@ -261,7 +261,7 @@ python -m src.genesis_engine "A puzzle game where you match colored blocks to cl
 This project is built specifically for the **$10,000 Lovable AI Showdown**, demonstrating:
 
 1. **AI Limit-Pushing**: Complete autonomous game generation pipeline
-2. **Claude 4 Opus Mastery**: Showcases model's creative and technical capabilities
+2. **Claude 4 Sonnet Mastery**: Showcases model's creative and technical capabilities
 3. **Real-World Value**: Practical tool for game prototyping and education
 4. **Technical Excellence**: Production-ready code and architecture
 5. **Beautiful Demo**: Polished UI/UX for impressive presentations
@@ -322,7 +322,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- **Anthropic** for Claude 4 Opus API
+- **Anthropic** for Claude 4 Sonnet API
 - **Lovable** for hosting the AI Showdown
 - **Open Source Community** for amazing tools and libraries
 

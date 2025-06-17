@@ -20,7 +20,7 @@ Our project stands out because:
 - **Instant Gratification**: Games run immediately, no setup required
 - **Educational Value**: Perfect for learning game development
 
-### 2. **Claude 4 Opus Showcase**
+### 2. **Claude 4 Sonnet Showcase**
 We demonstrate Claude's unique capabilities:
 - **Creative Reasoning**: Game design from minimal input
 - **Technical Excellence**: Clean, well-architected code generation
@@ -70,7 +70,7 @@ What if AI could handle the entire process - from concept to code?"
 
 ### Closing (2:30-3:00)
 ```
-"AI Genesis Engine - pushing the boundaries of what's possible with Claude 4 Opus.
+"AI Genesis Engine - pushing the boundaries of what's possible with Claude 4 Sonnet.
 From idea to playable game in seconds. The future of game development is here."
 ```
 
@@ -107,7 +107,7 @@ From idea to playable game in seconds. The future of game development is here."
 - Clean separation of concerns
 - Comprehensive testing suite
 
-### Claude 4 Opus Mastery
+### Claude 4 Sonnet Mastery
 - Optimized prompts for each phase
 - Smart code validation and cleaning
 - Leverages model's creative capabilities
@@ -182,7 +182,7 @@ From idea to playable game in seconds. The future of game development is here."
 
 ## 🏁 Final Pitch
 
-"AI Genesis Engine represents a paradigm shift in creative collaboration between humans and AI. By leveraging Claude 4 Opus's advanced capabilities, we've created not just a tool, but a creative partner that can transform any game idea into reality in seconds. This isn't the future of game development - it's here today."
+"AI Genesis Engine represents a paradigm shift in creative collaboration between humans and AI. By leveraging Claude 4 Sonnet's advanced capabilities, we've created not just a tool, but a creative partner that can transform any game idea into reality in seconds. This isn't the future of game development - it's here today."
 
 ## 📧 Submission Template
 
@@ -192,7 +192,7 @@ Category: Claude/Anthropic
 Tagline: Transform Ideas into Playable Games with AI
 
 Description:
-AI Genesis Engine revolutionizes game development by using Claude 4 Opus to automatically generate complete, playable 2D games from single-sentence prompts. Our hybrid React/Python architecture delivers professional-quality games with documentation in under 60 seconds.
+AI Genesis Engine revolutionizes game development by using Claude 4 Sonnet to automatically generate complete, playable 2D games from single-sentence prompts. Our hybrid React/Python architecture delivers professional-quality games with documentation in under 60 seconds.
 
 Key Features:
 - Complete autonomous game generation
@@ -209,7 +209,7 @@ Technical Innovation:
 - Comprehensive testing
 
 Why We Should Win:
-We push AI limits by demonstrating complete creative autonomy while maintaining professional quality. This is the most advanced showcase of Claude 3 Opus's capabilities in a practical, valuable application.
+We push AI limits by demonstrating complete creative autonomy while maintaining professional quality. This is the most advanced showcase of Claude 3 Sonnet's capabilities in a practical, valuable application.
 
 Demo Video: [Link]
 Repository: [Link]

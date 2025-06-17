@@ -70,7 +70,7 @@ Access the application at http://localhost:5173
 
 | Variable | Description | How to Get |
 |----------|-------------|------------|
-| `ANTHROPIC_API_KEY` | Claude 4 Opus API key | [Anthropic Console](https://console.anthropic.com/) |
+| `ANTHROPIC_API_KEY` | Claude 4 Sonnet API key | [Anthropic Console](https://console.anthropic.com/) |
 
 ### Optional Configuration
 
